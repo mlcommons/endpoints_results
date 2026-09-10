@@ -1,0 +1,72 @@
+{
+  "submitter_org_names": "Krai",
+  "submitter_contact": "info@krai.ai",
+  "submission_id": "",
+  "submission_date": "",
+  "publish_date": "",
+  "system_name": "Dell PowerEdge XE9680",
+  "system_category": "datacenter",
+  "system_availability_status": "Available",
+  "max_supported_concurrency": 2048,
+  "system_size": "8x MI300X-192GB",
+  "system_node_ensemble_count": 1,
+  "system_node_ensemble_total": 1,
+  "serving_framework": "vLLM v0.19.1",
+  "node_types": [
+    {
+      "system_node_ensemble_id": 0,
+      "number_of_nodes": 1,
+      "host_processor_model_name": "Intel(R) Xeon(R) Platinum 8460Y+",
+      "host_processors_per_node": 2,
+      "host_processor_core_count": 80,
+      "host_processor_vcpu_count": 160,
+      "host_memory_capacity": "2.1T",
+      "host_memory_configuration": "32 x 64GB DDR5-4800",
+      "accelerator_model_name": "AMD Instinct MI300X-NPS1-SPX-192GB-750W",
+      "accelerators_per_node": 8,
+      "accelerator_memory_capacity": "192GB",
+      "accelerator_memory_type": "HBM3",
+      "accelerator_interconnect": "XGMI",
+      "accelerator_host_interconnect": "PCIe Gen5 x16",
+      "host_network_card_count": "2x Ethernet",
+      "host_networking": "Ethernet",
+      "host_storage_capacity": "3.1 GB NVMe SSD, 12.1 TB SSD",
+      "host_storage_type": "NVMe SSD",
+      "other_hardware": "",
+      "hw_notes": "",
+      "cooling": "Air-cooled",
+      "inference_backend": "ROCm",
+      "driver": "ROCm Driver 6.10.5",
+      "operating_system": "ubuntu 22.04",
+      "filesystem": "ext4 ramfs vfat xfs",
+      "container_link": "https://hub.docker.com/layers/rocm/vllm/rocm7.13.0_gfx94X-dcgpu_ubuntu24.04_py3.13_pytorch_2.10.0_vllm_0.19.1",
+      "other_software_stack": "ROCm Driver 6.10.5",
+      "sw_notes": "Powered by the KRAI X automation technology"
+    }
+  ],
+  "division": "Standardized",
+  "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+  "model_name": "llama3.1-8b",
+  "model_precision": "bfloat16",
+  "link_to_model": "https://github.com/mlcommons/inference/tree/master/language/llama3.1-8b#get-model",
+  "link_to_model_transformation": "Not applicable",
+  "model_notes": "",
+  "dataset_id": "cnn_dailymail::llama3_8b",
+  "dataset_name": "CNN-Daily Mail",
+  "input_token_average": 800.0,
+  "output_token_average": 60.0,
+  "dataset_type": "text",
+  "dataset_link": "https://github.com/mlcommons/inference/tree/master/language/llama3.1-8b#get-dataset",
+  "measured_accuracy_score": {
+    "cnn_dailymail::llama3_8b": {
+      "scores": {
+        "rouge1": 38.8125,
+        "rouge2": 15.9372,
+        "rougeL": 24.5073,
+        "rougeLsum": 35.8642,
+        "gen_len": 8165080.0,
+        "gen_num": 13368.0
+      }
+    }
+  }
+}

@@ -1,0 +1,65 @@
+variables:
+  ENDPOINT_CONTAINER_IMAGE:
+    value: docker://ghcr.io/mlcommons/endpoints:4235a9c
+  VLLM_CONTAINER_IMAGE:
+    value: docker://registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/centml-rubin-vllm@sha256:141b04dc8fb0461f9875bd116cf831aa5876b655ff210465e4bca8e21f004dcb
+  SERVICE_VENV:
+    value: ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-v4.1-flash/swebench_service/.venv
+  WORK_DIR:
+    value: /path/to/repository
+  RECIPE_DIR:
+    value: ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-v4.1-flash/configs/GB300-NVL72_GB300-288GB_aarch64x4_vLLM-Dynamo
+  SCRATCH_DIR:
+    value: /path/to/shared-assets
+  CONTAINER_MOUNTS:
+    value: ${{ variables.WORK_DIR }}:${{ variables.WORK_DIR }},${{ variables.SCRATCH_DIR }}:${{ variables.SCRATCH_DIR }}
+  SLURM_ACCOUNT:
+    value: your_account
+  SLURM_PARTITION:
+    value: your_partition
+  SLURM_TIME:
+    value: 04:00:00
+  GPUS_PER_NODE:
+    type: integer
+    value: 4
+  SLURM_NODES:
+    type: integer
+    value: 1
+operators:
+- name: host_bash
+  type: bash
+- name: vllm_container
+  type: srun
+  container_image: ${{ variables.VLLM_CONTAINER_IMAGE }}
+  container_writable: false
+  container_mount_home: true
+  container_remap_root: true
+  container_mounts:
+  - ${{ variables.CONTAINER_MOUNTS }}
+  ntasks: 1
+  nodes: 1
+  overlap: true
+- name: endpoint_container
+  type: srun
+  container_image: ${{ variables.ENDPOINT_CONTAINER_IMAGE }}
+  container_writable: false
+  container_mount_home: true
+  container_remap_root: true
+  container_mounts:
+  - ${{ variables.CONTAINER_MOUNTS }}
+  - ${{ variables.DATA_PATH }}/dataset_cache:/mnt/inference-endpoint/dataset_cache:ro
+  ntasks: 1
+  nodes: 1
+  overlap: true
+backends:
+- name: slurm_cluster
+  type: slurm
+  default: true
+  account: ${{ variables.SLURM_ACCOUNT }}
+  partition: ${{ variables.SLURM_PARTITION }}
+  gpus_per_node: ${{ variables.GPUS_PER_NODE }}
+  time: ${{ variables.SLURM_TIME }}
+  nodes: ${{ variables.SLURM_NODES }}
+  extra_args:
+  - --exclusive
+  - --signal=B:TERM@60

@@ -1,0 +1,51 @@
+{
+  "measurement_start_utc": "2026-10-26T23:49:17Z",
+  "source_head": "366888dcdd75464218f6e9b4cc7281b8b1686707",
+  "source_override": "configs/vllm-cpu.conf selects recorded C8 image ID",
+  "probe_client_image_id": "sha256:d02c2a5ededb09498e50ba8bbd70a1bb87fcd473fc6d0ed5a95562001abcfc4f",
+  "curl_version": "8.14.1",
+  "model_calibration_manifest_sha256": "e495a94ea93367880b3ec031f2a88732eeb7acf94538bb152862453abe64e513",
+  "model_calibration_manifest": {
+    "calibration_image_id": "sha256:cdd25869839bfc7d0e2fe5dbf53948127044d277d8cf43f1122df4ca24e94140",
+    "corpus_sha256": "772cfe63812799f4b2201c094e67366967f71511bed69391324f07b7c04474ca",
+    "kv_cache_dtype": "fp8",
+    "model_scope": "language_model",
+    "mtp_kv_cache_dtype": "bfloat16",
+    "mtp_path": "mtp",
+    "mtp_weight_scheme": "w8a8_int8",
+    "recipe_version": 8,
+    "source_model": "Qwen/Qwen3.6-35B-A3B",
+    "source_revision": "995ad96eacd98c81ed38be0c5b274b04031597b0",
+    "weight_dtype": "int8"
+  },
+  "manifest": {
+    "MTP_ENABLED": "false",
+    "WEIGHT_DTYPE": "int8",
+    "KV_CACHE_DTYPE": "fp8",
+    "RUNTIME_IMAGE_ID": "sha256:320822eb5201c388cccb926f76caa94f81ea20fba5579773a0637dc721ee33f6",
+    "ROUTING_IMAGE_ID": "sha256:60147df2073066e892b8fc76168bc2de2bdbaaf23480ad13b516ce554af16082",
+    "ROUTING_PROXY_IMAGE_ID": "sha256:3855673506f2c707afffb48a7de12a799df07c60ee9c0d5abb4fb68fc304e1a1",
+    "TP_SIZE": "2",
+    "REPLICA_COUNT": "3",
+    "WORKER_NUMA_GROUPS": "0,1 2,3 4,5",
+    "WORKER_KV_CACHE_SPACE_GIB": "64 64 64",
+    "PUBLIC_ENDPOINT_URL": "http://localhost:30000",
+    "LLMD_ENVOY_CONCURRENCY": "4"
+  },
+  "routing_configs": {
+    "envoy.yaml": {
+      "sha256": "7e9595ff6c555cd510556e524dd61c694b3160b4165b0bed9aeea36f8d9a9015",
+      "matches_original_c8": true
+    },
+    "epp.yaml": {
+      "sha256": "97ccb24cb20ac40c885f18f080d9ea9f747985b60ace54bce8b9c57922857413",
+      "matches_original_c8": true
+    },
+    "endpoints.yaml": {
+      "sha256": "b41670bb534153e54a5f87975658be90580e65f717366735147674a325cd5e91",
+      "matches_original_c8": true
+    }
+  },
+  "container_network_mode": "host",
+  "samples_sha256": "c86410c3c461951af8563aa35dfdc940290a2199514705f7e4103705c96d8e2a"
+}

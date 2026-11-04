@@ -1,0 +1,43 @@
+backend: pytorch
+tensor_parallel_size: 32
+moe_expert_parallel_size: 32
+enable_attention_dp: true
+enable_lm_head_tp_in_adp: true
+pipeline_parallel_size: 1
+max_batch_size: 4
+max_num_tokens: 16
+max_seq_len: 23140
+print_iter_log: true
+enable_iter_perf_stats: false
+enable_iter_req_stats: false
+stream_interval: 30
+num_postprocess_workers: 4
+kv_cache_config:
+  enable_block_reuse: false
+  free_gpu_memory_fraction: 0.9
+  dtype: fp8
+moe_config:
+  backend: CUTEDSL
+  use_low_precision_moe_combine: true
+nvfp4_gemm_config:
+  allowed_backends:
+  - cutlass
+  - cublaslt
+  - cutedsl
+  - cuda_core
+cache_transceiver_config:
+  max_tokens_in_buffer: 16384
+  backend: UCX
+cuda_graph_config:
+  enable_padding: true
+  batch_sizes:
+  - 1
+  - 2
+  - 4
+scheduler_config:
+  capacity_scheduler_policy: MAX_UTILIZATION
+  context_chunking_policy: FIRST_COME_FIRST_SERVED
+speculative_config:
+  decoding_type: MTP
+  num_nextn_predict_layers: 3
+  max_concurrency: 16384

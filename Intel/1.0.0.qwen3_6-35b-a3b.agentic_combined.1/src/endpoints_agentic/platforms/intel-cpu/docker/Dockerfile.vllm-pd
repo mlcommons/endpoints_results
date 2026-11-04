@@ -1,0 +1,94 @@
+# syntax=docker/dockerfile:1
+
+# The launcher always overrides this immutable sentinel with a digest reference.
+ARG RUNTIME_BASE_IMAGE=scratch
+FROM ${RUNTIME_BASE_IMAGE} AS vllm-base
+
+FROM vllm-base AS builder
+
+ARG NIXL_VERSION
+ARG NIXL_COMMIT
+ARG UCX_COMMIT
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        autoconf \
+        automake \
+        libasio-dev \
+        libtool \
+        liburing-dev \
+        ninja-build \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip install --no-cache-dir \
+        "build" \
+        "meson-python" \
+        "ninja" \
+        "patchelf" \
+        "pybind11" \
+        "pytest" \
+        "pyyaml" \
+        "setuptools==80.9.0" \
+        "tomlkit" \
+        "types-PyYAML"
+
+WORKDIR /tmp/ucx
+RUN git init . \
+    && git remote add origin https://github.com/openucx/ucx.git \
+    && git fetch --depth=1 origin "${UCX_COMMIT}" \
+    && git checkout --detach FETCH_HEAD \
+    && ./autogen.sh \
+    && ./contrib/configure-release-mt \
+        --prefix=/opt/ucx \
+        --enable-shared \
+        --disable-static \
+        --disable-doxygen-doc \
+        --enable-optimizations \
+        --enable-cma \
+        --enable-devel-headers \
+        --without-cuda \
+        --without-rocm \
+        --without-ze \
+        --without-gdrcopy \
+    && make -j"$(nproc)" \
+    && make -j"$(nproc)" install-strip
+
+WORKDIR /tmp/nixl
+RUN git init . \
+    && git remote add origin https://github.com/ai-dynamo/nixl.git \
+    && git fetch --depth=1 origin "${NIXL_COMMIT}" \
+    && git checkout --detach FETCH_HEAD \
+    && NIXL_NO_STUBS_FALLBACK=1 python -m build \
+        --wheel \
+        --no-isolation \
+        --skip-dependency-check \
+        --outdir /tmp/nixl-wheels \
+        -Cbuild-dir=/tmp/nixl-build \
+        -Csetup-args=-Ducx_path=/opt/ucx \
+        -Csetup-args=-Denable_plugins=UCX \
+        -Csetup-args=-Dbuild_tests=false \
+        -Csetup-args=-Dbuild_examples=false \
+        -Csetup-args=-Dinstall_headers=false \
+    && find /tmp/nixl-build -name "nixl-${NIXL_VERSION}-py3-none-any.whl" \
+        -exec cp '{}' /tmp/nixl-wheels/ \; \
+    && test "$(find /tmp/nixl-wheels -maxdepth 1 -name '*.whl' | wc -l)" -eq 2
+
+# Keep only the UCX shared runtime (including its transport modules).
+WORKDIR /
+RUN mkdir -p /tmp/ucx-runtime/opt/ucx/lib \
+    && cp -a /opt/ucx/lib/. /tmp/ucx-runtime/opt/ucx/lib/ \
+    && find /tmp/ucx-runtime -type f \( -name '*.a' -o -name '*.la' \) -delete \
+    && rm -rf \
+        /tmp/ucx-runtime/opt/ucx/lib/cmake \
+        /tmp/ucx-runtime/opt/ucx/lib/pkgconfig
+
+FROM vllm-base AS runtime
+
+COPY --from=builder /tmp/ucx-runtime/ /
+COPY --from=builder /tmp/nixl-wheels/ /tmp/nixl-wheels/
+
+ENV LD_LIBRARY_PATH="/opt/ucx/lib"
+
+RUN python -m pip install --no-cache-dir --no-deps /tmp/nixl-wheels/*.whl \
+    && rm -rf /tmp/nixl-wheels

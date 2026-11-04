@@ -1,0 +1,49 @@
+= Calibration and Model Transformations
+
+== Source model and weight transformation
+
+The INT8 checkpoint was produced from the BF16
+`Qwen/Qwen3.6-35B-A3B` model at revision
+`995ad96eacd98c81ed38be0c5b274b04031597b0`.
+
+The recipe uses `llmcompressor==0.13.0` for data-free INT8 W8A8
+round-to-nearest (RTN) quantization of language-model projections, including
+MoE expert `gate_proj`, `up_proj`, and `down_proj` weights.
+Weights use per-channel quantization; activations use dynamic tokenwise
+quantization. The corpus below is used only to calibrate FP8 KV-cache scales.
+
+Token embeddings, the output head, and routing gates (`mlp.gate` and
+`mlp.shared_expert_gate`) are excluded. Source BF16 normalization weights
+are restored after compression. Multimodal components are outside the recipe
+scope, and MTP was disabled in the submitted runs.
+
+== FP8 KV-cache calibration
+
+Static, symmetric, tensorwise 8-bit FP8 KV-cache scales are calibrated with
+the `static_minmax` observer. `llmcompressor.oneshot` uses ten samples,
+batch size 1, no sample shuffling, and a maximum sequence length of
+16,384 tokens.
+
+The source is the Agentic Inference performance dataset
+(`mlperf_agentic_inference_dataset.jsonl`), extracted from the benchmark
+client image and verified against SHA-256
+`1beb24c882122df96571cf11b390acbea388944038bc55c78b891475459014ae`.
+
+Using the tokenizer at the model revision above, the generator renders chat
+prefixes and selects ten distinct conversations with seed 42. It prefers
+prefixes of 10,240–16,384 tokens; longer prefixes fill any remaining places
+and are truncated to their final 16,384 tokens.
+
+Forward passes over these tokenized prefixes provide the KV observations.
+Prefixes may include earlier assistant and tool messages; their content is
+used for calibration. No reference-completion labels or gradient-based
+training are used.
+
+== Implementation references
+
+See
+link:../src/endpoints_agentic/platforms/intel-cpu/calibration/calibrate.py[the quantization recipe],
+link:../src/endpoints_agentic/platforms/intel-cpu/calibration/generate_corpus.py[the corpus generator],
+and
+link:../src/endpoints_agentic/platforms/intel-cpu/docker/Dockerfile.calibration[the pinned calibration environment].
+Software versions are summarized in link:software_disclosure.md[the software disclosure].

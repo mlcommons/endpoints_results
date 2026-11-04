@@ -1,0 +1,37 @@
+{
+  "cooling": "air",
+  "node_sets": [
+    {
+      "components": {
+        "accelerator": {
+          "count_per_node": 0,
+          "tdp_per_unit": {
+            "source": "https://www.intel.com/content/www/us/en/products/sku/240777/intel-xeon-6980p-processor-504m-cache-2-00-ghz/specifications.html",
+            "source_type": "vendor_spec",
+            "value_w": 0
+          }
+        },
+        "cpu": {
+          "count_per_node": 2,
+          "model": "Intel\u00ae Xeon\u00ae 6980P Processor",
+          "tdp_per_unit": {
+            "source": "https://www.intel.com/content/www/us/en/products/sku/240777/intel-xeon-6980p-processor-504m-cache-2-00-ghz/specifications.html",
+            "source_type": "vendor_spec",
+            "value_w": 500
+          }
+        },
+        "scale_up_network": {
+          "method": "none"
+        }
+      },
+      "node_set_id": 0,
+      "nodes_provisioned": 1,
+      "power_method": "component_sum",
+      "system_node_ensemble_id": 0
+    }
+  ],
+  "scale_out": {
+    "present": false
+  },
+  "system_desc_id": "1-node-2S-GNR_128C"
+}

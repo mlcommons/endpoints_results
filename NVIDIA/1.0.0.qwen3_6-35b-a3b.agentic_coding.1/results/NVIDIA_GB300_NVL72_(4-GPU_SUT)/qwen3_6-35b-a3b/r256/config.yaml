@@ -1,0 +1,101 @@
+name: qwen-agentic-benchmark
+version: '1.0'
+type: online
+submission_ref:
+  model: Qwen/Qwen3.6-35B-A3B
+  ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+model_params:
+  name: Qwen/Qwen3.6-35B-A3B
+  temperature: 1.0
+  top_k: 20
+  top_p: 0.95
+  repetition_penalty: 1.0
+  presence_penalty: 1.5
+  chat_template_kwargs:
+    preserve_thinking: true
+  max_new_tokens: 8192
+  min_new_tokens: 1
+  skip_special_tokens: true
+  streaming: 'on'
+  tokenizer_name: "${{ variables.MODEL_PATH }}"
+datasets:
+- name: agentic_coding
+  type: performance
+  path: "${{ variables.DATASET_PATH }}"
+  accuracy_config:
+    eval_method: agentic_inference_inline
+    num_repeats: 1
+  agentic_inference:
+    turn_timeout_s: 14400.0
+    enable_salt: true
+    inject_tool_delay: true
+    routing_headers:
+    - X-Session-ID
+    num_trajectories_to_issue: 6743
+    stop_issuing_on_first_user_complete: false
+- name: swe_bench
+  type: accuracy
+  accuracy_config:
+    eval_method: swe_bench_scorer
+    num_repeats: 1
+    extras:
+      swebench_service_url: http://localhost:18080
+      num_instances: 200
+      workers: 10
+      max_eval_workers: 10
+      swebench_template: qwen_tools
+settings:
+  runtime:
+    scheduler_random_seed: 10487924139932647040
+    dataloader_random_seed: 586478644936801402
+  load_pattern:
+    type: agentic_inference
+    target_concurrency: 256
+  client:
+    num_workers: 64
+    log_level: INFO
+    warmup_connections: 0
+    auto_warmup_budget_fraction: 0.25
+    max_concurrent_warmup_connects: 128
+    max_connections: -1
+    transport:
+      type: zmq
+      recv_buffer_size: 16777216
+      send_buffer_size: 16777216
+      io_threads: 4
+      worker_io_threads: 1
+      high_water_mark: 0
+      linger: -1
+      immediate: 1
+    stream_all_chunks: false
+    worker_initialization_timeout: 300.0
+    worker_graceful_shutdown_wait: 0.5
+    worker_force_kill_timeout: 0.5
+    insecure: false
+    max_idle_time: 0.5
+    min_required_connections: -1
+    worker_gc_mode: relaxed
+  timeouts:
+    interrupted_teardown_grace_s: 30.0
+    service_ready_timeout_s: 300.0
+    warmup_drain_timeout_s: 240.0
+  warmup:
+    enabled: false
+    salt: false
+    drain: false
+    warmup_random_seed: 586478644936801402
+  profiling: {}
+  early_stopping:
+    enabled: false
+  steady_state:
+    enabled: false
+  metrics_tokenizer_workers: 2
+  metrics_isl: false
+endpoint_config:
+  endpoints:
+  - "http://${{ backends.cluster.nodes[0].ip_address }}:${{ variables.PORT }}"
+  api_key: <redacted>
+  api_type: openai
+report_dir: "${SFLOW_TASK_OUTPUT_DIR}/report"
+verbose: false
+enable_cpu_affinity: true

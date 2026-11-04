@@ -1,0 +1,37 @@
+= Calibration
+
+Please refer to NVIDIA Submission's calibration doc.
+
+== Qwen3.6-35B-A3B (GB300-NVL72 and VR-NVL72, vLLM + Dynamo)
+
+=== Weights and KV cache (§2.9.3, §2.9.5)
+
+No calibration data is used. Nothing is calibrated on the benchmark performance or accuracy datasets.
+
+* Weights: vLLM online MXFP8 (`quantization: mxfp8`), applied when the BF16 checkpoint is loaded: E4M3 values with
+  one UE8M0 (power-of-two) scale per block of 32 elements, computed from the weights themselves. Activations of
+  those linears are quantized the same way at run time. These stay BF16 (`quantization-config.ignore` of every
+  point's `server.yaml`): `lm_head`, `embed_tokens`, the vision tower, the MoE router (`mlp.gate`) and
+  `mlp.shared_expert_gate`, all norms, the GDN `A_log`, `conv1d`, `dt_bias`, `in_proj_a` / `in_proj_b` /
+  `in_proj_ba` and `norm`, and the MTP `fc` and norms.
+
+=== Speculative decoding (§2.9.4)
+
+No calibration data is used. Nothing is calibrated on the benchmark performance or accuracy datasets.
+
+Method: data-free post-training quantization to MXFP8, the same scheme as the target model. No calibration data, no gradient updates, no other changes to the drafter
+Weights: quantized once at load. Each 32-element block gets one power-of-two (UE8M0) scale derived from the block's maximum, and the values are stored as E4M3.
+Activations: quantized dynamically at run time with the same block-32 scheme, using scales computed from each call's own values. No stored or calibrated activation scales.
+MXFP8 on both GB300-NVL72 and VR-NVL72: the MTP layer's qkv_proj, o_proj, routed experts and shared expert.
+Kept in BF16 (quantization-config.ignore): mtp.fc, all norms, router gate, shared_expert_gate, embed_tokens.
+Draft lm_head:
+VR-NVL72 (VLLM_MTP_DRAFT_LM_HEAD_MXFP8=1, VLLM_MTP_DRAFT_LM_HEAD_MXFP8_MAX_M=128): draft logits use an MXFP8 copy of the BF16 lm_head, quantized as above, when a draft step generates at most 128 draft tokens (one per request). Above that, the BF16 head is used.
+GB300-NVL72: BF16 at all sizes.
+Drafter KV cache: FP8 E4M3 (kv-cache-dtype: fp8) with a fixed per-tensor scale of 1.0. The checkpoint provides no KV scales.
+Verification: not affected by quantization.
+
+=== Run-time execution (§2.9.6.2, §2.2.1)
+
+None of these approximate the model or skip computation that can affect the output. All are exact or differ from the
+reference only by floating-point reassociation; none depends on the benchmark data.
+

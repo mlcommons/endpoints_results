@@ -1,0 +1,9 @@
+#!/bin/sh
+# GKE stand-in for Slurm's `squeue`, for the Kimi-K3 SWE-bench service only.
+# There are no Slurm steps on GKE. The drop's swe_cleanup.owned_steps() calls
+#   squeue --steps --noheader --jobs J --format=%i|%j
+# and expects one "step|name" line per live step. Printing nothing reports "no steps".
+# The processes the srun shim exec'd are still found and stopped by owned_pids(), which
+# matches SWE_STEP_NAME in /proc. Without this shim, cleanup raises OSError and keeps the
+# /tmp scratch.
+exit 0

@@ -1,0 +1,88 @@
+version: '0.1'
+variables:
+  DYN_TCP_REQUEST_TIMEOUT:
+    value: '60'
+  BATCH_PYTHON:
+    value: ''
+  BENCHMARK_MODE:
+    value: perf
+  REPO_ROOT:
+    value: /path/to/mlperf-endpoints
+  MODEL_PATH:
+    value: /path/to/Kimi-K3-NVFP4
+  DRAFT_PATH:
+    value: ${{ variables.SGL_DRAFT_PATH }}
+  DATASET_PATH:
+    value: /path/to/mlperf_agentic_inference_dataset.jsonl
+  CLIENT_IMAGE:
+    value: ghcr.io#mlcommons/endpoints@sha256:1523051b141437b25083924d6428082f435713516eee71c54ae207b393900b2d
+  SLURM_ACCOUNT:
+    value: your_account
+  SLURM_PARTITION:
+    value: your_partition
+  SERVER_IMAGE:
+    value: /path/to/kimi-k3-dynamo.sqsh
+  SGL_DRAFT_PATH:
+    value: /path/to/RadixArk-Kimi-K3-DSpark-3c5bac30
+  SLURM_QOS:
+    value: normal
+  WALL_TIME:
+    value: 04:00:00
+  CONTROL_PLANE_DIR:
+    value: ${{ variables.RESULTS_PATH }}/control-plane
+  CONTAINER_SCRATCH:
+    value: /raid/scratch
+  SLURM_EXTRA_ARGS:
+    value: []
+  MODE:
+    value: disagg
+  RESULTS_PATH:
+    value: /path/to/unique-attempt-results
+backends:
+- name: cluster
+  type: slurm
+  default: true
+  nodes: ${{ variables.TOTAL_NODES }}
+  gpus_per_node: 4
+  time: ${{ variables.WALL_TIME }}
+  extra_args:
+  - --exclusive
+  - --qos=${{ variables.SLURM_QOS }}
+  - --segment=${{ variables.SEGMENT_NODES }}
+  account: ${{ variables.SLURM_ACCOUNT }}
+  partition: ${{ variables.SLURM_PARTITION }}
+operators:
+- name: host
+  type: srun
+  ntasks: 1
+  extra_args:
+  - --overlap
+- name: server
+  type: srun
+  kill_on_bad_exit: true
+  container_image: ${{ variables.SERVER_IMAGE }}
+  container_writable: true
+  container_remap_root: true
+  extra_args:
+  - --overlap
+  - --no-container-entrypoint
+  mpi: pmix
+  container_mount_home: false
+  container_mounts:
+  - ${{ variables.MODEL_PATH }}:/models/kimi-k3:ro
+  - ${{ variables.DRAFT_PATH }}:/models/kimi-k3-dspark:ro
+- name: client
+  type: srun
+  container_image: ${{ variables.CLIENT_IMAGE }}
+  container_writable: true
+  container_remap_root: true
+  ntasks: 1
+  extra_args:
+  - --overlap
+  - --no-container-entrypoint
+  container_mount_home: false
+  container_mounts:
+  - ${{ variables.MODEL_PATH }}:/models/kimi-k3:ro
+  - ${{ variables.DATASET_PATH }}:/data/agentic_combined_v6.jsonl:ro
+  - ${{ variables.RESULTS_PATH }}:/results
+  - ${{ variables.RESULTS_PATH }}:${{ variables.RESULTS_PATH }}

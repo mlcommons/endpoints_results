@@ -1,0 +1,28 @@
+division: Standardized
+max_supported_concurrency: 256
+model_name: qwen3_6-35b-a3b
+model_precision: INT8
+link_to_model: https://huggingface.co/Qwen/Qwen3.6-35B-A3B/tree/995ad96eacd98c81ed38be0c5b274b04031597b0
+dataset: agentic_combined
+dataset_name: MLPerf Agentic Inference
+dataset_type: Accuracy + Performance
+dataset_link: https://endpoints.mlcommons-storage.org/metadata/mlperf_agentic_inference_dataset.uri
+shared_src: src/endpoints_agentic
+shared_docs: docs
+seed_set: A
+target_cohort: 2026-10-C1
+runtime_settings:
+  load_pattern: agentic_inference
+  stream_all_chunks: false
+  runtime:
+    scheduler_rng_seed: 10487924139932647040
+    sample_index_rng_seed: 586478644936801402
+    model_seed: 9315206023656308754
+concurrency: 128
+region: high_concurrency
+warmup:
+  duration_s: 0.0
+  requests_issued: 0
+  requests_completed: 0
+  data_source: No warmup; zero verified by events.jsonl
+  concurrency: 0

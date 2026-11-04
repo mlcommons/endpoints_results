@@ -1,0 +1,277 @@
+# Stage the DeepSeek-V4.1-Flash assets onto EVERY node of the A4X-max pool.
+#
+# GKE port of the drop's "Model and data" section
+# (NVIDIA/src/deepseek-v4.1-flash/README.md + dataset/README.md#deepseek-v41-flash).
+# Slurm keeps one copy on shared storage (${SCRATCH_DIR}); GKE has no shared
+# filesystem and sflow's fs:// artifacts are hostPath MOUNTS, not fetches, so
+# the bytes must already be on whichever node sflow reserves.  Each point needs
+# only 1 node, but sflow picks it at run time -- stage the whole pool.
+#
+# Layout written (the recipes' MODEL_PATH / DATA_PATH; same tree as the drop's
+# ${SCRATCH_DIR}/{models,data}):
+#   <node-local-ssd>/model-cache/DeepSeek-V4.1-Flash/
+#   <node-local-ssd>/mlperf-data/agentic_dataset/
+#     perf/mlperf_agentic_inference_dataset.jsonl       (sha256 verified)
+#     dataset_cache/swe_bench_verified_test.parquet     (SWE-bench Verified parquet + HF cache;
+#                                                        needed only for MODE=acc|both)
+#
+# A missing fs:// path is only a plan-time WARNING on Kubernetes (guide F5), so
+# a node without the dataset would otherwise start the run anyway.  The recipe
+# hard-fails on missing/corrupt assets too; staging correctly is still the fix.
+#
+#   1. (optional) kubectl create secret generic hf-token --from-literal=token=hf_...
+#   2. kubectl apply -f stage-assets.yaml
+#   3. kubectl rollout status ds/stage-dsv41-flash-assets --timeout=120m
+#   4. kubectl logs -l app=stage-dsv41-flash-assets -c stage --tail=3 --prefix | sort
+#      Every node must print `STAGED: node ready`.
+#   5. kubectl delete -f stage-assets.yaml     # the staged files persist
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stage-dsv41-flash-assets-src
+  namespace: default
+data:
+  # The drop's README: `hf download deepseek-ai/DeepSeek-V4.1-Flash --revision
+  # dba1be0a...`.  hf://<repo>@<40-char sha> only -- the revision is written
+  # into .sflow-staged, so a changed pin restages instead of reusing weights.
+  # The repo is public (not gated).
+  SRC_MODEL: "hf://deepseek-ai/DeepSeek-V4.1-Flash@dba1be0a40aa45a94ad051997016db3960a90277"
+  # Exact size of the 48 safetensors shards at that revision (HF API,
+  # 2026-09-30).  The repo total is 510,313,353,565 B across 88 files
+  # (config/tokenizer/vision/encoding extras); the shards are what matter.
+  # The marker proves the COPY finished, not that the SOURCE was complete; an
+  # exact byte count proves both.
+  EXPECTED_SAFETENSORS_BYTES: "510296708312"
+  EXPECTED_SAFETENSORS_COUNT: "48"
+  # The unchanged 613-trajectory Agentic Inference JSONL (MLCommons storage,
+  # see dataset/README.md#deepseek-v41-flash).  This bucket holds the byte-
+  # identical copy used for the v1.0.0 Kimi-K3 runs; the sha256 below is the
+  # drop's and is enforced regardless of source.  If a node already has the
+  # Kimi-K3 copy (mlperf-data/mlperf_agentic_inference_dataset.jsonl) with the
+  # right sha256, it is reused locally instead of re-downloaded.
+  SRC_DATASET: "<bucket>/mlperf-data/mlperf_agentic_inference_dataset.jsonl"
+  DATASET_SHA256: "1beb24c882122df96571cf11b390acbea388944038bc55c78b891475459014ae"
+  # SWE-bench Verified HF cache + parquet for MODE=acc|both (dataset/README.md:
+  # "The client and SWE-bench service run with Hugging Face offline, so seed the
+  # princeton-nlp/SWE-bench_Verified cache and export the Parquet file expected
+  # by client.yaml").  Seeded with the SWE-bench service's own pins
+  # (swebench_service uv.lock at endpoints e9f427c: datasets==5.0.0,
+  # huggingface-hub==1.23.0).  "0" skips it (perf-only pool).
+  STAGE_SWEBENCH_CACHE: "1"
+  # The drop does not pin a revision (it loads HEAD); this is HEAD observed
+  # 2026-09-30.  A different refs/main is reported as a WARN, not a failure:
+  # record the value with any accuracy result.
+  SWEBENCH_VERIFIED_REVISION: "c104f840cc67f8b6eec6f759ebc8b2693d585d4a"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: stage-dsv41-flash-assets
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: stage-dsv41-flash-assets
+  template:
+    metadata:
+      labels:
+        app: stage-dsv41-flash-assets
+    spec:
+      # Deliberately every node in the pool, not just the one a run reserves.
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      initContainers:
+      # Pulls the pinned checkpoint straight from HuggingFace onto this node and
+      # seeds the SWE-bench cache + parquet.  hf download is resumable and skips
+      # complete files, so re-applying (or a pod restart) continues a ~510 GB transfer.
+      - name: fetch-hf
+        # Multi-arch (arm64 manifest), has pip and CA certs; cloud-cli has neither.
+        image: python:3.12-slim
+        envFrom:
+        - configMapRef:
+            name: stage-dsv41-flash-assets-src
+        env:
+        # huggingface_hub >= 1.x downloads via Xet; HF_HUB_ENABLE_HF_TRANSFER
+        # is deprecated and ignored.  This is its replacement.
+        - name: HF_XET_HIGH_PERFORMANCE
+          value: "1"
+        - name: NODE_NAME
+          valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+        # Optional: many nodes behind one NAT IP can hit HF's anonymous rate
+        # limit.  NEVER inline a token here.
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef: {name: hf-token, key: token, optional: true}
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -uo pipefail
+          spec="${SRC_MODEL#hf://}"; repo="${spec%@*}"; rev="${spec##*@}"
+          if [[ "${SRC_MODEL}" != hf://* ]] || [ "${repo}" = "${spec}" ] || ! [[ "${rev}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "FATAL: SRC_MODEL must be hf://<repo>@<40-char commit sha>, got ${SRC_MODEL}"; exit 1
+          fi
+          MODEL_DIR=/model-cache/DeepSeek-V4.1-Flash
+
+          shard_stats() {  # prints "<count> <bytes>" of the top-level *.safetensors
+            find "${MODEL_DIR}" -maxdepth 1 -name '*.safetensors' -printf '%s\n' 2>/dev/null \
+              | awk '{n++; s+=$1} END {printf "%d %.0f\n", n, s}'
+          }
+          shards_ok() {
+            read -r n s < <(shard_stats)
+            [ "${n}" = "${EXPECTED_SAFETENSORS_COUNT}" ] && [ "${s}" = "${EXPECTED_SAFETENSORS_BYTES}" ]
+          }
+
+          mkdir -p "${MODEL_DIR}"
+          if [ "$(cat "${MODEL_DIR}/.sflow-staged" 2>/dev/null)" = "${rev}" ] && shards_ok; then
+            echo "already staged: ${repo}@${rev:0:8} ($(shard_stats))"
+          else
+            rm -f "${MODEL_DIR}/.sflow-staged"
+            pip install -q --no-cache-dir "huggingface_hub[cli]" || exit 1
+            ok=0
+            for attempt in 1 2 3; do
+              echo "attempt ${attempt}: hf download ${repo} --revision ${rev} -> ${MODEL_DIR} on ${NODE_NAME}"
+              if hf download "${repo}" --revision "${rev}" --local-dir "${MODEL_DIR}" --quiet; then
+                # Leftover partial blobs from an interrupted earlier attempt
+                # (guide F36): harmless to hf, but they inflate du and confuse
+                # anyone auditing the cache.
+                find "${MODEL_DIR}" -name '*.incomplete' -type f -delete 2>/dev/null || true
+                if shards_ok; then
+                  echo "${rev}" > "${MODEL_DIR}/.sflow-staged"
+                  echo "FETCHED: ${repo}@${rev:0:8} ($(shard_stats))"; ok=1; break
+                fi
+                echo "shards are '$(shard_stats)', want '${EXPECTED_SAFETENSORS_COUNT} ${EXPECTED_SAFETENSORS_BYTES}'; retrying"
+              fi
+              sleep $((attempt * 30))
+            done
+            [ "${ok}" = 1 ] || { echo "FATAL: model fetch failed after 3 attempts"; exit 1; }
+          fi
+
+          # ---- SWE-bench Verified cache + parquet (MODE=acc|both only) ----
+          if [ "${STAGE_SWEBENCH_CACHE}" = "1" ]; then
+            CACHE=/mlperf-data/agentic_dataset/dataset_cache
+            mkdir -p "${CACHE}"
+            if [ -f "${CACHE}/.sflow-staged" ] && [ -s "${CACHE}/swe_bench_verified_test.parquet" ]; then
+              echo "already staged: SWE-bench Verified cache + parquet ($(cat "${CACHE}/.sflow-staged"))"
+            else
+              python3 -m venv /tmp/swe && /tmp/swe/bin/pip install -q --no-cache-dir \
+                  "datasets==5.0.0" "huggingface-hub==1.23.0" || { echo "FATAL: pip failed"; exit 1; }
+              # Exactly the drop's command (dataset/README.md), HF online once.
+              HF_HOME="${CACHE}" HF_HUB_OFFLINE=0 /tmp/swe/bin/python - <<'PY' \
+                || { echo "FATAL: SWE-bench Verified cache/parquet seed failed"; exit 1; }
+          from pathlib import Path
+          import os
+          from datasets import load_dataset
+          cache = Path(os.environ["HF_HOME"])
+          ds = load_dataset("princeton-nlp/SWE-bench_Verified", split="test")
+          out = cache / "swe_bench_verified_test.parquet"
+          out.parent.mkdir(parents=True, exist_ok=True)
+          ds.to_parquet(str(out))
+          print("wrote", out, len(ds))
+          PY
+              got=$(cat "${CACHE}"/hub/datasets--princeton-nlp--SWE-bench_Verified/refs/main 2>/dev/null || echo unknown)
+              if [ "${got}" != "${SWEBENCH_VERIFIED_REVISION}" ]; then
+                echo "WARN: SWE-bench_Verified refs/main=${got}, recorded ${SWEBENCH_VERIFIED_REVISION} -- record the new value with accuracy results"
+              fi
+              echo "${got}" > "${CACHE}/.sflow-staged"
+              echo "FETCHED: SWE-bench Verified cache + parquet @ ${got}"
+            fi
+          fi
+        volumeMounts:
+        - {name: model-cache, mountPath: /model-cache}
+        - {name: mlperf-data, mountPath: /mlperf-data}
+        resources:
+          requests: {cpu: "4", memory: 8Gi}
+      containers:
+      - name: stage
+        # MUST be multi-arch (arm64 nodes).  `:stable` is amd64+arm64 and has
+        # bash, sha256sum and gcloud; the *-slim tags are amd64-only.
+        image: <registry>/cloudsdktool/google-cloud-cli:stable
+        envFrom:
+        - configMapRef:
+            name: stage-dsv41-flash-assets-src
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -uo pipefail
+          MODEL_DIR=/model-cache/DeepSeek-V4.1-Flash
+          DATA=/mlperf-data/agentic_dataset
+          JSONL=/mlperf-data/agentic_dataset/perf/mlperf_agentic_inference_dataset.jsonl
+          KIMI_COPY=/mlperf-data/mlperf_agentic_inference_dataset.jsonl
+          mkdir -p "${DATA}/perf" "${DATA}/dataset_cache"
+          FAILED=0
+          fail() { echo "MISSING: $*"; FAILED=1; }
+          sha() { sha256sum "$1" | cut -d' ' -f1; }
+
+          # --- model (downloaded by fetch-hf; verify only) -----------------
+          want_rev="${SRC_MODEL##*@}"
+          read -r n s < <(find "${MODEL_DIR}" -maxdepth 1 -name '*.safetensors' -printf '%s\n' 2>/dev/null \
+                          | awk '{n++; t+=$1} END {printf "%d %.0f\n", n, t}')
+          if [ "$(cat "${MODEL_DIR}/.sflow-staged" 2>/dev/null)" = "${want_rev}" ] \
+              && [ "${n}" = "${EXPECTED_SAFETENSORS_COUNT}" ] && [ "${s}" = "${EXPECTED_SAFETENSORS_BYTES}" ]; then
+            echo "STAGED: DeepSeek-V4.1-Flash @ ${want_rev:0:8} -> ${MODEL_DIR} (${n} shards, ${s} B)"
+          else
+            fail "DeepSeek-V4.1-Flash: marker/shards wrong (${n} shards, ${s} B) -- kubectl logs -c fetch-hf"
+          fi
+          # client.yaml tokenizes with the checkpoint (tokenizer_name: ${MODEL_PATH}).
+          for f in config.json tokenizer.json tokenizer_config.json; do
+            [ -f "${MODEL_DIR}/${f}" ] || fail "DeepSeek-V4.1-Flash/${f}"
+          done
+          left=$(find "${MODEL_DIR}" -name '*.incomplete' -type f 2>/dev/null | wc -l)
+          [ "${left}" = 0 ] || echo "WARN: ${left} *.incomplete file(s) under ${MODEL_DIR}"
+
+          # --- perf dataset ---------------------------------------------------
+          if [ -s "${JSONL}" ] && [ "$(sha "${JSONL}")" = "${DATASET_SHA256}" ]; then
+            echo "STAGED (already present): ${JSONL}"
+          elif [ -s "${KIMI_COPY}" ] && [ "$(sha "${KIMI_COPY}")" = "${DATASET_SHA256}" ]; then
+            cp "${KIMI_COPY}" "${JSONL}.tmp" && mv "${JSONL}.tmp" "${JSONL}" \
+              && echo "STAGED: ${JSONL} (from the Kimi-K3 copy on this node)"
+          else
+            gcloud storage cp "${SRC_DATASET}" "${JSONL}.tmp" && mv "${JSONL}.tmp" "${JSONL}" \
+              && echo "STAGED: ${JSONL} (from ${SRC_DATASET})" || fail "dataset copy from ${SRC_DATASET} failed"
+          fi
+          if [ -s "${JSONL}" ]; then
+            GOT=$(sha "${JSONL}")
+            if [ "${GOT}" = "${DATASET_SHA256}" ]; then
+              echo "VERIFIED: dataset sha256 ${GOT} ($(wc -l < "${JSONL}") lines)"
+            else
+              echo "CORRUPT: dataset sha256 ${GOT} != ${DATASET_SHA256}"; rm -f "${JSONL}"; FAILED=1
+            fi
+          else
+            fail "${JSONL}"
+          fi
+
+          # --- SWE-bench cache + parquet --------------------------------------
+          if [ "${STAGE_SWEBENCH_CACHE}" = "1" ]; then
+            if [ -f "${DATA}/dataset_cache/.sflow-staged" ] && [ -s "${DATA}/dataset_cache/swe_bench_verified_test.parquet" ]; then
+              echo "STAGED: SWE-bench Verified cache + parquet @ $(cat "${DATA}/dataset_cache/.sflow-staged")"
+            else
+              fail "SWE-bench Verified cache/parquet (STAGE_SWEBENCH_CACHE=1) -- kubectl logs -c fetch-hf"
+            fi
+          else
+            echo "SKIPPED: SWE-bench Verified cache (STAGE_SWEBENCH_CACHE=0; MODE=perf only)"
+          fi
+
+          if [ "${FAILED}" = 0 ]; then
+            echo "STAGED: node ready"
+          else
+            echo "NOT READY: fix the above before running any point recipe"
+          fi
+          sleep infinity
+        volumeMounts:
+        - {name: model-cache, mountPath: /model-cache}
+        - {name: mlperf-data, mountPath: /mlperf-data}
+        resources:
+          requests: {cpu: "500m", memory: 1Gi}
+      volumes:
+      - name: model-cache
+        hostPath:
+          path: <node-local-ssd>/model-cache
+          type: DirectoryOrCreate
+      - name: mlperf-data
+        hostPath:
+          path: <node-local-ssd>/mlperf-data
+          type: DirectoryOrCreate

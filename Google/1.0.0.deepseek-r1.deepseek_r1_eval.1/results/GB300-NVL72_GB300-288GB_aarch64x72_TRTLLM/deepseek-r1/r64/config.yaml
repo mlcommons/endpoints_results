@@ -1,0 +1,87 @@
+name: deepseek-r1-c64
+version: '1.0'
+type: submission
+submission_ref:
+  model: deepseek-r1
+  ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+benchmark_mode: online
+model_params:
+  name: /mnt/stateful_partition/kube-ephemeral-ssd/model-cache/DeepSeek-R1-NVFP4-v2
+  temperature: 0.0
+  seed: 9315206023656308754
+  top_p: 1.0
+  max_new_tokens: 20000
+  min_new_tokens: 1
+  skip_special_tokens: true
+  streaming: 'on'
+  tokenizer_name: /mnt/stateful_partition/kube-ephemeral-ssd/model-cache/DeepSeek-R1-NVFP4-v2
+datasets:
+- name: dsr1-perf
+  type: performance
+  path: /mnt/stateful_partition/kube-ephemeral-ssd/mlperf-data/deepseek_r1_eval.parquet
+- name: deepseek_r1_accuracy
+  type: accuracy
+  path: /mnt/stateful_partition/kube-ephemeral-ssd/mlperf-data/deepseek_r1_eval.parquet
+  accuracy_config:
+    eval_method: legacy_mlperf_deepseek_r1
+    ground_truth: ground_truth
+    num_repeats: 1
+    extras:
+      subset_column: dataset
+      question_column: question
+      tokenizer_path: /mnt/stateful_partition/kube-ephemeral-ssd/model-cache/DeepSeek-R1-NVFP4-v2
+settings:
+  runtime:
+    n_samples_to_issue: 17552
+    scheduler_random_seed: 10487924139932647040
+    dataloader_random_seed: 586478644936801402
+  load_pattern:
+    type: concurrency
+    target_concurrency: 64
+  client:
+    num_workers: 8
+    log_level: INFO
+    warmup_connections: 0
+    auto_warmup_budget_fraction: 0.25
+    max_concurrent_warmup_connects: 128
+    max_connections: -1
+    transport:
+      type: zmq
+      recv_buffer_size: 16777216
+      send_buffer_size: 16777216
+      io_threads: 4
+      worker_io_threads: 1
+      high_water_mark: 0
+      linger: -1
+      immediate: 1
+    stream_all_chunks: false
+    worker_initialization_timeout: 300.0
+    worker_graceful_shutdown_wait: 0.5
+    worker_force_kill_timeout: 0.5
+    insecure: false
+    max_idle_time: 4.0
+    min_required_connections: 0
+    worker_gc_mode: relaxed
+  timeouts:
+    interrupted_teardown_grace_s: 30.0
+    service_ready_timeout_s: 30.0
+    warmup_drain_timeout_s: 240.0
+  warmup:
+    enabled: false
+    salt: false
+    drain: false
+    warmup_random_seed: 586478644936801402
+  profiling: {}
+  early_stopping:
+    enabled: true
+  metrics_tokenizer_workers: 32
+endpoint_config:
+  endpoints:
+  - http://192.168.0.55:8000
+  - http://192.168.0.103:8001
+  - http://192.168.0.55:8002
+  - http://192.168.0.103:8003
+  api_type: openai_completions
+report_dir: /mnt/stateful_partition/kube-ephemeral-ssd/dsr1-reports/dsr1_endpoints_v1_0_2_disagg_gke-20261016-003115-407d89
+verbose: false
+enable_cpu_affinity: true

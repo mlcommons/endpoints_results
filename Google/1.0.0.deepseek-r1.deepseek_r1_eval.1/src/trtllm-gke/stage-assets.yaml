@@ -1,0 +1,325 @@
+# Stage the DeepSeek-R1 assets for the v1.0.2 drop onto every node of the
+# A4X-max pool.
+#
+# v1.0.2 CHANGE: the drop serves a DIFFERENT checkpoint,
+# centml/DeepSeek-R1-NVFP4-v2-mlpinf@93947a0d (NVIDIA README: "Other DeepSeek-R1
+# NVFP4 builds, including nvidia/DeepSeek-R1-NVFP4, are different checkpoints").
+# It is staged NEXT TO the v1.0.1 checkpoint, in model-cache/DeepSeek-R1-NVFP4-v2,
+# under its own DaemonSet/ConfigMap names, so v1.0.1 recipes keep working.
+# Images and the eval parquet are unchanged from v1.0.1.
+#
+# WHY A DAEMONSET
+# ---------------
+# GKE has no shared filesystem. sflow's `fs://` artifacts are *hostPath mounts*,
+# not a fetch: nothing is copied at run time, the bytes must already be on the
+# node. And sflow picks which nodes to reserve at run time, so there is no way
+# to know in advance which 18 of the pool it will take -- a reserved node
+# without the checkpoint fails the run AFTER the reservation succeeded and the
+# other 17 nodes have already loaded 700+ GB of weights.
+#
+# Staging the whole pool costs disk (~0.7 TB/node against ~11 TB of local SSD)
+# and a one-time read, and makes any 18-node subset valid.
+#
+# THE FAILURE THIS PREVENTS
+# -------------------------
+# On a Kubernetes backend a missing `fs://` path is only a WARNING at plan
+# time. The run starts, the Endpoints client falls back to a synthetic dataset
+# with a message that is easy to lose in a 100k-line log, and the number looks
+# plausible. That silently invalidated three consecutive runs on this cluster.
+# It is not a small effect either: on the synthetic fallback DSR1's
+# speculative-decoding acceptance collapsed from ~2.58 to 2.03 of 4 tokens per
+# step and throughput read 38.2k instead of 45.8k tok/s with no config change.
+# The recipe's benchmark task now hard-fails on a missing dataset, but stage it
+# properly and confirm `Using official dataset at:` in the log regardless.
+#
+#   1. Put the checkpoint and the parquet in a bucket the nodes can read, and
+#      set SRC_MODEL / SRC_DATASET below.
+#   2. kubectl apply -f stage-assets.yaml
+#   3. kubectl rollout status ds/stage-dsr1-v2-assets --timeout=90m
+#   4. kubectl logs -l app=stage-dsr1-v2-assets --tail=3 --prefix | sort
+#      Every node must print `STAGED: node ready`.
+#   5. kubectl delete -f stage-assets.yaml     # the staged files persist
+#
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stage-dsr1-v2-assets-src
+  namespace: default
+data:
+  # DeepSeek-R1 ModelOpt NVFP4 checkpoint AND its tokenizer. NVIDIA publishes
+  # https://huggingface.co/nvidia/DeepSeek-R1-NVFP4 but the drop does not pin a
+  # revision -- mirror one revision into a bucket, and RECORD its revision and
+  # checksums with the result. A public checkpoint link alone does not
+  # establish parity with a previous run (deepseek-r1/README.md says exactly
+  # this).
+  #
+  # Two source forms:
+  #   <bucket>/path            gcloud storage rsync (main container)
+  #   hf://<repo>@<40-char sha>   hf download --revision, straight from
+  #                               HuggingFace onto each node (fetch-hf init
+  #                               container). The revision is REQUIRED and is
+  #                               written into .sflow-staged, so a changed pin
+  #                               restages instead of silently reusing weights.
+  # Pinned here: the repo AND revision the v1.0.2 drop's
+  # NVIDIA/src/deepseek-r1/README.md ("Model and data") names.
+  SRC_MODEL: "hf://centml/DeepSeek-R1-NVFP4-v2-mlpinf@93947a0d7bd04f73ff98636f6b18ff5839e7aaf9"
+  # The official prepared MLPerf parquet, pinned to the Endpoints commit the
+  # client image is built from (dataset/README.md#deepseek-r1). Git LFS: this
+  # is the materialized-file URL, not the LFS pointer.
+  SRC_DATASET: "https://media.githubusercontent.com/media/mlcommons/endpoints/e9f427ce74fd90e7fafdbc77ee7746cc00245692/examples/07_DeepSeekR1_Example/data/deepseek_r1_eval.parquet"
+  # From dataset/README.md#deepseek-r1. Leave empty to skip the check (and
+  # lose the guarantee).
+  DATASET_SHA256: "36facfae18f42587b7e4863e16a0e96446470761017d207791e609537d0f6f02"
+  # Minimum acceptable on-disk size for the checkpoint, in bytes.
+  #
+  # This guards a failure the .sflow-staged marker does NOT cover: the marker
+  # proves the COPY finished, not that the SOURCE was complete. If the bucket
+  # is still filling, rsync faithfully mirrors a partial checkpoint, exits 0,
+  # and writes the marker -- poisoning the node cache with a truncated model
+  # that every later run then skips re-staging.
+  #
+  # The pinned revision is 413,340,550,290 bytes (173 files, 163 safetensors
+  # shards; HuggingFace tree API, 2026-10-07). The threshold sits just below
+  # that total and below the size of one shard, so a missing shard fails it.
+  EXPECTED_MODEL_MIN_BYTES: "413000000000"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: stage-dsr1-v2-assets
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: stage-dsr1-v2-assets
+  template:
+    metadata:
+      labels:
+        app: stage-dsr1-v2-assets
+    spec:
+      # Deliberately every node in the pool, not just the 18 the run reserves.
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      initContainers:
+      # SRC_MODEL=hf://<repo>@<rev> only; a no-op for <bucket> sources. Pulls the
+      # pinned revision straight from HuggingFace onto this node. hf download
+      # is resumable and skips files already complete, so re-applying (or a
+      # pod restart) continues rather than restarting ~420 GB.
+      - name: fetch-hf
+        # Multi-arch (arm64 manifest), has pip. The cloud-cli image does not.
+        image: python:3.12-slim
+        envFrom:
+        - configMapRef:
+            name: stage-dsr1-v2-assets-src
+        env:
+        # huggingface_hub >= 1.x downloads via Xet; HF_HUB_ENABLE_HF_TRANSFER
+        # is deprecated and ignored. This is its replacement.
+        - name: HF_XET_HIGH_PERFORMANCE
+          value: "1"
+        - name: NODE_NAME
+          valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+        # Optional: the repo is public, but 17 nodes behind one NAT IP can hit
+        # HF's anonymous rate limit. `kubectl create secret generic hf-token
+        # --from-literal=token=hf_...` to raise it. NEVER inline a token here.
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef: {name: hf-token, key: token, optional: true}
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -uo pipefail
+          # http(s) dataset: fetched here because this image has CA certs; the
+          # main container's image has neither curl nor a CA bundle. The main
+          # container verifies magic bytes and DATASET_SHA256.
+          PARQUET=/mlperf-data/deepseek_r1_eval.parquet
+          case "${SRC_DATASET}" in
+            http://*|https://*)
+              if [ -s "${PARQUET}" ]; then
+                echo "dataset already present: ${PARQUET}"
+              else
+                echo "fetching dataset ${SRC_DATASET}"
+                python3 -c 'import sys, urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])' \
+                    "${SRC_DATASET}" "${PARQUET}.tmp" && mv "${PARQUET}.tmp" "${PARQUET}" \
+                  || { rm -f "${PARQUET}.tmp"; echo "FATAL: dataset download failed"; exit 1; }
+                echo "FETCHED: ${PARQUET}"
+              fi;;
+          esac
+          case "${SRC_MODEL}" in hf://*) ;; *) echo "SRC_MODEL is not hf:// -- nothing to fetch"; exit 0;; esac
+          spec="${SRC_MODEL#hf://}"; repo="${spec%@*}"; rev="${spec##*@}"
+          if [ "${repo}" = "${spec}" ] || ! [[ "${rev}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "FATAL: SRC_MODEL must be hf://<repo>@<40-char commit sha>, got ${SRC_MODEL}"; exit 1
+          fi
+          MODEL_DIR=/model-cache/DeepSeek-R1-NVFP4-v2
+          mkdir -p "${MODEL_DIR}"
+          have=$(du -sb "${MODEL_DIR}" | cut -f1)
+          if [ "$(cat "${MODEL_DIR}/.sflow-staged" 2>/dev/null)" = "${rev}" ] && [ "${have}" -ge "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+            echo "already staged: ${repo}@${rev:0:8} (${have} B)"; exit 0
+          fi
+          rm -f "${MODEL_DIR}/.sflow-staged"
+          pip install -q --no-cache-dir "huggingface_hub[cli]" || exit 1
+          for attempt in 1 2 3; do
+            echo "attempt ${attempt}: hf download ${repo} --revision ${rev} -> ${MODEL_DIR} on ${NODE_NAME}"
+            if hf download "${repo}" --revision "${rev}" --local-dir "${MODEL_DIR}" --quiet; then
+              got=$(du -sb "${MODEL_DIR}" | cut -f1)
+              if [ "${got}" -ge "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+                echo "${rev}" > "${MODEL_DIR}/.sflow-staged"
+                echo "FETCHED: ${repo}@${rev:0:8} (${got} B)"; exit 0
+              fi
+              echo "downloaded only ${got} B (< ${EXPECTED_MODEL_MIN_BYTES}); retrying"
+            fi
+            sleep $((attempt * 30))
+          done
+          echo "FATAL: fetch failed after 3 attempts"; exit 1
+        volumeMounts:
+        - {name: model-cache, mountPath: /model-cache}
+        - {name: mlperf-data, mountPath: /mlperf-data}
+        resources:
+          requests: {cpu: "4", memory: 4Gi}
+      containers:
+      - name: stage
+        # MUST be multi-arch: these are arm64 GB300 nodes. `google/cloud-sdk:slim`
+        # and every `google-cloud-cli:*-slim` tag publish an amd64-only manifest
+        # and crash-loop here with "exec format error". `:stable` is amd64+arm64
+        # and carries bash, curl and sha256sum, all of which this script uses.
+        image: <registry>/cloudsdktool/google-cloud-cli:stable
+        envFrom:
+        - configMapRef:
+            name: stage-dsr1-v2-assets-src
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -uo pipefail
+          MODELS=/model-cache
+          DATA=/mlperf-data
+          MODEL_DIR="${MODELS}/DeepSeek-R1-NVFP4-v2"
+          PARQUET="${DATA}/deepseek_r1_eval.parquet"
+          mkdir -p "${MODELS}" "${DATA}"
+
+          FAILED=0
+          fail() { echo "MISSING: $*"; FAILED=1; }
+
+          # --- model checkpoint -------------------------------------------
+          stage_model() {
+            if [[ "${SRC_MODEL}" == hf://* ]]; then
+              # Downloaded by the fetch-hf init container; only verify here.
+              want_rev="${SRC_MODEL##*@}"
+              have=$(du -sb "${MODEL_DIR}" 2>/dev/null | cut -f1)
+              if [ "$(cat "${MODEL_DIR}/.sflow-staged" 2>/dev/null)" = "${want_rev}" ] \
+                  && [ -n "${have}" ] && [ "${have}" -ge "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+                echo "STAGED: DeepSeek-R1-NVFP4-v2 @ ${want_rev:0:8} -> ${MODEL_DIR} (${have} B)"
+                return 0
+              fi
+              fail "DeepSeek-R1-NVFP4: fetch-hf did not leave revision ${want_rev} (${have:-0} B) -- kubectl logs -c fetch-hf"
+              return 1
+            fi
+            if [ -f "${MODEL_DIR}/.sflow-staged" ]; then
+              # Re-check the size even when the marker exists: it could have
+              # been written by an older revision of this script, or the
+              # directory could have been trimmed by kubelet GC since.
+              have=$(du -sb "${MODEL_DIR}" 2>/dev/null | cut -f1)
+              if [ -n "${have}" ] && [ "${have}" -ge "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+                echo "STAGED (already complete): DeepSeek-R1-NVFP4 -> ${MODEL_DIR} (${have} B)"
+                return 0
+              fi
+              echo "WARN: marked staged but only ${have:-0} B (< ${EXPECTED_MODEL_MIN_BYTES} B); restaging"
+              rm -f "${MODEL_DIR}/.sflow-staged"
+            fi
+            if [ -z "${SRC_MODEL}" ] || [[ "${SRC_MODEL}" == *REPLACE-ME* ]]; then
+              fail "DeepSeek-R1-NVFP4: ${MODEL_DIR} is not staged and SRC_MODEL is not configured"
+              return 1
+            fi
+            echo "Copying DeepSeek-R1-NVFP4 from ${SRC_MODEL} ... (resumable)"
+            # rsync is incremental, so re-applying the DaemonSet resumes rather
+            # than restarting a ~400 GB transfer.
+            if ! gcloud storage rsync --recursive "${SRC_MODEL}" "${MODEL_DIR}"; then
+              fail "DeepSeek-R1-NVFP4: copy failed (re-apply to resume)"
+              return 1
+            fi
+            got=$(du -sb "${MODEL_DIR}" 2>/dev/null | cut -f1)
+            if [ -z "${got}" ] || [ "${got}" -lt "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+              fail "DeepSeek-R1-NVFP4: staged ${got:-0} B, expected >= ${EXPECTED_MODEL_MIN_BYTES} B -- source incomplete? NOT marking complete"
+              return 1
+            fi
+            touch "${MODEL_DIR}/.sflow-staged"
+            echo "STAGED: DeepSeek-R1-NVFP4 -> ${MODEL_DIR} ($(du -sh "${MODEL_DIR}" | cut -f1), ${got} B)"
+          }
+
+          # --- eval parquet ------------------------------------------------
+          stage_parquet() {
+            if [ -s "${PARQUET}" ]; then
+              echo "STAGED (already present): deepseek_r1_eval.parquet"
+            elif [ -z "${SRC_DATASET}" ] || [[ "${SRC_DATASET}" == *REPLACE-ME* ]]; then
+              fail "deepseek_r1_eval.parquet: absent and SRC_DATASET is not configured"
+              return 1
+            elif [[ "${SRC_DATASET}" == <bucket> ]]; then
+              gcloud storage cp "${SRC_DATASET}" "${PARQUET}.tmp" && mv "${PARQUET}.tmp" "${PARQUET}" \
+                && echo "STAGED: deepseek_r1_eval.parquet" || fail "parquet copy failed"
+            else
+              # http(s) sources are fetched by the fetch-hf init container:
+              # google-cloud-cli:stable has no curl/wget, and its python3 has
+              # no CA bundle (urllib fails CERTIFICATE_VERIFY_FAILED).
+              fail "deepseek_r1_eval.parquet: absent -- fetch-hf downloads http(s) sources; kubectl logs -c fetch-hf"
+            fi
+          }
+
+          stage_model
+          stage_parquet
+
+          # --- verification --------------------------------------------------
+          # Parquet magic bytes: a valid file starts AND ends with "PAR1". This
+          # catches the common failure of a truncated or HTML-error-page copy,
+          # which pandas then rejects at benchmark time -- i.e. 18 nodes into
+          # the run instead of here.
+          if [ -s "${PARQUET}" ]; then
+            HEAD=$(head -c 4 "${PARQUET}")
+            TAIL=$(tail -c 4 "${PARQUET}")
+            if [ "${HEAD}" = "PAR1" ] && [ "${TAIL}" = "PAR1" ]; then
+              echo "VERIFIED: parquet magic bytes OK ($(du -h "${PARQUET}" | cut -f1))"
+            else
+              echo "CORRUPT: ${PARQUET} is not a parquet file (head='${HEAD}' tail='${TAIL}')"
+              FAILED=1
+            fi
+            if [ -n "${DATASET_SHA256}" ]; then
+              GOT=$(sha256sum "${PARQUET}" | cut -d' ' -f1)
+              if [ "${GOT}" = "${DATASET_SHA256}" ]; then
+                echo "VERIFIED: dataset sha256 matches the MLPerf runbook"
+              else
+                echo "CORRUPT: dataset sha256 ${GOT} != ${DATASET_SHA256}"
+                FAILED=1
+              fi
+            else
+              echo "WARN: DATASET_SHA256 is empty -- byte-identity with the MLPerf copy is UNVERIFIED"
+            fi
+          fi
+
+          # The client tokenizes with this checkpoint too (client.yaml sets
+          # tokenizer_name: ${MODEL_PATH}), so the tokenizer files must be here,
+          # not just the weights.
+          for f in config.json tokenizer_config.json; do
+            [ -f "${MODEL_DIR}/${f}" ] || fail "DeepSeek-R1-NVFP4/${f}"
+          done
+          ls "${MODEL_DIR}"/*.safetensors >/dev/null 2>&1 || fail "DeepSeek-R1-NVFP4: no .safetensors shards"
+
+          if [ "${FAILED}" = 0 ]; then
+            echo "STAGED: node ready"
+          else
+            echo "NOT READY: fix the above before running any point recipe"
+          fi
+          sleep infinity
+        volumeMounts:
+        - {name: model-cache, mountPath: /model-cache}
+        - {name: mlperf-data, mountPath: /mlperf-data}
+        resources:
+          requests: {cpu: "500m", memory: 1Gi}
+      volumes:
+      - name: model-cache
+        hostPath:
+          path: <node-local-ssd>/model-cache
+          type: DirectoryOrCreate
+      - name: mlperf-data
+        hostPath:
+          path: <node-local-ssd>/mlperf-data
+          type: DirectoryOrCreate

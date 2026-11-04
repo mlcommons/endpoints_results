@@ -1,0 +1,46 @@
+variables:
+  NUM_CTX_SERVERS:
+    type: integer
+    value: 4
+  GPUS_PER_CTX_RANK:
+    type: integer
+    value: 2
+  NUM_GEN_SERVERS:
+    type: integer
+    value: 1
+  GPUS_PER_GEN_RANK:
+    type: integer
+    value: 64
+  TOTAL_GPUS:
+    type: integer
+    value: ${{ variables.NUM_CTX_SERVERS * variables.GPUS_PER_CTX_RANK + variables.NUM_GEN_SERVERS * variables.GPUS_PER_GEN_RANK
+      }}
+  NUM_FRONTEND_SERVERS:
+    type: integer
+    value: 4
+  BASE_PORT:
+    type: integer
+    value: 30000
+  FRONTEND_PORT:
+    type: integer
+    value: 8000
+  CONTAINER_IMAGE:
+    value: docker://nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc14
+  MODEL_PATH:
+    value: ${{ variables.SCRATCH_DIR }}/models/DeepSeek-R1-NVFP4-v2
+  DATA_PATH:
+    value: ${{ variables.SCRATCH_DIR }}/data/deepseek_r1_eval.parquet
+  TRTLLM_YAML_CTX:
+    value: ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_32/server-ctx.yaml
+  TRTLLM_ENV_YAML_CTX:
+    value: ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_32/server-env.yaml
+  TRTLLM_YAML_GEN:
+    value: ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_32/server-gen.yaml
+  TRTLLM_ENV_YAML_GEN:
+    value: ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_32/server-env.yaml
+  ENDPOINT_CONFIG:
+    value: ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_32/client.yaml
+  ENDPOINT_ENV_YAML:
+    value: ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_32/endpoint_env.yaml
+  MODE:
+    value: both

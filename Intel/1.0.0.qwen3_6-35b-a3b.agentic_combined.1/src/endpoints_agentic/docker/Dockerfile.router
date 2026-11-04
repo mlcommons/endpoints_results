@@ -1,0 +1,16 @@
+FROM python:3.12-slim
+
+RUN apt-get update -o APT::Update::Error-Mode=any \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Opt-in only: 0.1.15 drops assistant reasoning_content while round-tripping
+# chat requests. Upgrade to the first release containing upstream PR #194.
+RUN pip install --no-cache-dir --disable-pip-version-check \
+        vllm-router==0.1.15 \
+    && python -m pip uninstall --yes pip
+
+RUN useradd --create-home --uid 1000 router
+USER router
+
+ENTRYPOINT ["vllm-router"]

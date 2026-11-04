@@ -1,0 +1,196 @@
+version: "0.1"
+
+variables:
+  GPUS_PER_WORKER:
+    description: "GPUs assigned to each dynamo.vllm replica."
+    type: integer
+    value: ${{ variables.TOTAL_GPUS // variables.NUM_WORKERS }}
+
+artifacts:
+  - name: VLLM_URLS
+    uri: <workdir>
+    content: ""
+
+workflow:
+  name: dsv41_flash_vllm_endpoint
+  variables:
+    HEAD_NODE_IP:
+      value: "${{ backends.slurm_cluster.nodes[0].ip_address }}"
+    FRONTEND_URL:
+      value: "http://${{ backends.slurm_cluster.nodes[0].ip_address }}:${{ variables.VLLM_PORT }}"
+  tasks:
+    - name: host_prepare
+      operator:
+        name: host_bash
+      script:
+        - |
+          set -euo pipefail
+          # Clear filesystem caches before loading the model.
+          sync
+          sudo -n /sbin/sysctl vm.drop_caches=3
+
+
+    - name: dynamo_frontend
+      depends_on:
+        - host_prepare
+      resources:
+        nodes:
+          indices: [0]
+      operator:
+        name: vllm_container
+      script:
+        - |
+          set -euo pipefail
+          ENV_EXPORTS=$(python3 ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-v4.1-flash/tools/run_with_env.py frontend ${{ variables.DYNAMO_ENV_YAML }} | tee /dev/stderr)
+          eval "$ENV_EXPORTS"
+          mkdir -p "$DYN_FILE_KV"
+          echo "${{ variables.HEAD_NODE_IP }}:${{ variables.VLLM_PORT }}" > ${{ artifacts.VLLM_URLS.path }}
+          # Reserve 12 physical cores (including SMT siblings) for each worker;
+          # frontend 12 4 returns all online CPUs outside the four worker sets.
+          # example for one node: FE_CPUS=0,25-88,113-176,201-264,289-351.
+          # taskset limits CPU execution across both NUMA nodes, without memory binding.
+          FE_CPUS=$(python3 ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-v4.1-flash/tools/cpuset.py frontend 12 ${{ variables.NUM_WORKERS }})
+          echo "$FE_CPUS" > "$SFLOW_WORKFLOW_OUTPUT_DIR/host_cpus.txt"
+          exec taskset -c "$FE_CPUS" python3 -m dynamo.frontend \
+            --discovery-backend file \
+            --request-plane tcp \
+            --event-plane zmq \
+            --router-mode round-robin \
+            --router-session-affinity-ttl-secs 3600 \
+            --http-host 0.0.0.0 \
+            --http-port ${{ variables.VLLM_PORT }}
+      probes:
+        readiness:
+          http_get:
+            url: "${{ variables.FRONTEND_URL }}/health"
+          timeout: 5400
+          interval: 5
+        failure:
+          log_watch:
+            regex_pattern: "re:(panicked at|Rejected incompatible workers)"
+          interval: 1
+          failure_threshold: 1
+    - name: vllm_worker
+      # Starting the frontend first also serializes the initial Pyxis image
+      # import. The worker replicas still launch in parallel after readiness.
+      depends_on:
+        - dynamo_frontend
+      replicas:
+        count: ${{ variables.NUM_WORKERS }}
+        policy: parallel
+      # The job allocates the complete four-GPU node without GPU GRES.
+      resources:
+        nodes:
+          indices: [0]
+      operator:
+        name: vllm_container
+      script:
+        - |
+          set -euo pipefail
+          IDX=$SFLOW_REPLICA_INDEX
+          export SLURM_RESTART_COUNT=${SLURM_RESTART_COUNT:-0}
+          # One fixed Dynamo system port per rank, below the i16 limit.
+          SYSTEM_PORT=$((30000 + IDX))
+          ENV_EXPORTS=$(WORKER_SYSTEM_PORT="$SYSTEM_PORT" WORKER_VLLM_PORT="$((20000 + IDX * 100))" \
+            python3 ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-v4.1-flash/tools/run_with_env.py worker ${{ variables.DYNAMO_ENV_YAML }} ${{ variables.SERVER_ENV_YAML }} | tee /dev/stderr)
+          eval "$ENV_EXPORTS"
+          # Defaults for GB300 points that do not specify persistent cache paths.
+          export VLLM_FLASHINFER_AUTOTUNE_CACHE_DIR=${VLLM_FLASHINFER_AUTOTUNE_CACHE_DIR:-${RECIPE_DIR}/.cache/persist/fi_autotune}
+          export DG_JIT_CACHE_DIR=${DG_JIT_CACHE_DIR:-${RECIPE_DIR}/.cache/persist/deep_gemm}
+          mkdir -p "$XDG_CACHE_HOME" "$PROMETHEUS_MULTIPROC_DIR"
+          mkdir -p "$DYN_FILE_KV" "$VLLM_CACHE_ROOT" "$TORCHINDUCTOR_CACHE_DIR" \
+            "$VLLM_RPC_BASE_PATH" "$TMPDIR" \
+            "$TRITON_CACHE_DIR" "$TILELANG_CACHE_DIR" "$VLLM_FLASHINFER_AUTOTUNE_CACHE_DIR" "$DG_JIT_CACHE_DIR" "$FLASHINFER_WORKSPACE_BASE"
+          # Rank IDX drives GPU IDX; read its CPU NUMA Affinity from the GPU row.
+          NODE=$(nvidia-smi topo -m | sed 's/\x1b\[[0-9;]*m//g' | awk -v g="GPU$IDX" 'NR>1 && $1==g {print $(NF-1); exit}')
+          [[ "$NODE" =~ ^[0-9]+$ ]] || { echo "No NUMA node for GPU$IDX"; exit 1; }
+          # Give each rank 12 physical cores with both SMT threads on its GPU's
+          # NUMA node. Skip the first physical core; ranks on the same node get
+          # consecutive, non-overlapping core groups. CPU IDs come from live topology.
+          # examples for one node (Linux logical CPU IDs, 24 threads per rank):
+          # GPU0/rank0: NODE=0, W_CPUS=1-12,177-188
+          # GPU1/rank1: NODE=0, W_CPUS=13-24,189-200
+          # GPU2/rank2: NODE=1, W_CPUS=89-100,265-276
+          # GPU3/rank3: NODE=1, W_CPUS=101-112,277-288
+          W_CPUS=$(python3 ${{ variables.WORK_DIR }}/NVIDIA/src/deepseek-v4.1-flash/tools/cpuset.py worker "$IDX" 12 ${{ variables.NUM_WORKERS }})
+          # Bind execution to W_CPUS and new host-memory allocations to NODE
+          # to keep Engram CPU offload local to the GPU's NUMA node.
+          exec numactl --physcpubind="$W_CPUS" --membind="$NODE" python3 -m dynamo.vllm \
+            ${{ variables.VLLM_ARGS }}
+      probes:
+        readiness:
+          log_watch:
+            regex_pattern: "endpoint 'dynamo.backend.generate'"
+            match_count: 1
+          timeout: 5400
+          interval: 10
+        failure:
+          log_watch:
+            regex_pattern: "re:(CUDA out of memory|Engine core initialization failed|Failed to bind to address|System status server startup failed)"
+          interval: 1
+          failure_threshold: 1
+
+    - name: swebench_service
+      operator:
+        name: host_bash
+      script:
+        - set -euo pipefail
+        - export SLURMD_NODENAME=$(hostname -s)
+        - test -x "${{ variables.SERVICE_VENV }}/bin/python"
+        - ENV_EXPORTS=$("${{ variables.SERVICE_VENV }}/bin/python" ${{ variables.WORK_DIR }}/NVIDIA/src/sflow/tools/run_with_env.py ${{ variables.ENDPOINT_ENV_YAML }} | tee /dev/stderr)
+        - eval "$ENV_EXPORTS"
+        - export no_proxy="${no_proxy:+${no_proxy},}127.0.0.1,localhost"
+        - export NO_PROXY="${NO_PROXY:+${NO_PROXY},}127.0.0.1,localhost"
+        - mkdir -p "${SFLOW_TASK_OUTPUT_DIR}/swebench_service_artifacts"
+        - >
+          "${{ variables.SERVICE_VENV }}/bin/python" -m swebench_service
+          --host 127.0.0.1
+          --port 18080
+          --auth-token local-swebench-service-token
+          --artifact-root "${SFLOW_TASK_OUTPUT_DIR}/swebench_service_artifacts"
+          --max-concurrent-runs 1
+          --subprocess-timeout-s 86400
+          --runtime pyxis
+          --image-registry registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/swebench-arm64
+          --max-stored-runs 10
+      probes:
+        readiness:
+          http_get:
+            url: http://127.0.0.1:18080/health
+          timeout: 300
+          interval: 5
+        failure:
+          log_watch:
+            regex_pattern: "re:(ERROR|RuntimeError)"
+
+    - name: endpoint_client
+      resources:
+        nodes:
+          count: 1
+      operator:
+        name: endpoint_container
+      depends_on:
+        - dynamo_frontend
+        - vllm_worker
+        - swebench_service
+      script:
+        - |
+          set -euo pipefail
+          ENV_EXPORTS=$(/opt/venv/bin/python3 ${{ variables.WORK_DIR }}/NVIDIA/src/sflow/tools/run_with_env.py ${{ variables.ENDPOINT_ENV_YAML }} | tee /dev/stderr)
+          eval "$ENV_EXPORTS"
+          VLLM_URLS_LIST=$(grep -v '^[[:space:]]*$' ${{ artifacts.VLLM_URLS.path }} | paste -sd ',')
+          test -n "$VLLM_URLS_LIST"
+          RESOLVED_ENDPOINT_YAML=${SFLOW_TASK_OUTPUT_DIR}/client.resolved.yaml
+          /opt/venv/bin/python3 ${{ variables.WORK_DIR }}/NVIDIA/src/sflow/tools/generate_endpoint_yaml.py --input ${{ variables.ENDPOINT_CONFIG }} --frontend-urls "$VLLM_URLS_LIST" --output "$RESOLVED_ENDPOINT_YAML"
+          /opt/venv/bin/inference-endpoint validate-yaml --config "$RESOLVED_ENDPOINT_YAML"
+          # Share the frontend's remaining CPU set, separate from worker cores.
+          # example for one node: CLIENT_CPUS=0,25-88,113-176,201-264,289-351.
+          # taskset applies CPU affinity only; no explicit NUMA memory binding here.
+          CLIENT_CPUS=$(cat "$SFLOW_WORKFLOW_OUTPUT_DIR/host_cpus.txt")
+          taskset -c "$CLIENT_CPUS" /opt/venv/bin/inference-endpoint benchmark from-config \
+            --config "$RESOLVED_ENDPOINT_YAML" --mode ${{ variables.MODE }} \
+            2>&1 | stdbuf -o0 tr '\r' '\n'
+      probes:
+        failure:
+          log_watch:
+            regex_pattern: "re:(?i)(token metric recorder failed|tokenizer drain (?:timed out|failed)|swebench service exited)"

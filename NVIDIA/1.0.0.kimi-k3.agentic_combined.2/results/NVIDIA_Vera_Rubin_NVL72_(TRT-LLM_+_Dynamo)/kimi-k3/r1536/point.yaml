@@ -1,0 +1,52 @@
+concurrency: 1536
+region: high_concurrency
+shared_src: src
+shared_docs: docs
+seed_set: A
+target_cohort: 2026-10-C1
+division: Standardized
+max_supported_concurrency: 1536
+model_name: kimi-k3
+model_precision: nvfp4
+link_to_model: https://huggingface.co/nvidia/Kimi-K3-NVFP4/tree/b2428a0b83a8b712ff2e1a8448a103d4175341f1
+link_to_model_transformation: null
+model_notes: Native NVFP4 checkpoint
+dataset_name: agentic_combined
+dataset_type: Accuracy + Performance
+dataset_link: https://endpoints.mlcommons-storage.org/index.html#mlperf-agentic-inference
+dataset: agentic_combined
+runtime_settings:
+  load_pattern: agentic_inference
+  target_concurrency: 1536
+  stream_all_chunks: false
+  runtime:
+    scheduler_rng_seed: 10487924139932647040
+    sample_index_rng_seed: 586478644936801402
+    # model_seed is not used: the client seeds only the scheduler and sample-index RNGs,
+    # and no rule defines what model_seed seeds. Declared from the bound seed set for the
+    # checker's seed-runtime-match only.
+    model_seed: 9315206023656308754
+warmup:
+  duration_s: 0
+  requests_issued: 0
+  requests_completed: 0
+  data_source: none; warmup disabled
+  concurrency: 0
+  initialization_steps: []
+offline: none
+speculative_decoding:
+  method: DSpark
+  params:
+    decoding_type: DSpark
+    speculative_model: /models/kimi-k3-dspark
+    max_draft_len: 3
+    block_size: 3
+    draft_model_id: RadixArk/Kimi-K3-DSpark
+    draft_revision: 3c5bac301d9cf392706189d82ed947feca6c2f0f
+    draft_source: https://huggingface.co/RadixArk/Kimi-K3-DSpark/tree/3c5bac301d9cf392706189d82ed947feca6c2f0f
+    draft_precision: bfloat16
+  model_id: RadixArk/Kimi-K3-DSpark
+  weight_checksum: git-sha1:3c5bac301d9cf392706189d82ed947feca6c2f0f
+nodes_used:
+- system_node_ensemble_id: 0
+  nodes: 8

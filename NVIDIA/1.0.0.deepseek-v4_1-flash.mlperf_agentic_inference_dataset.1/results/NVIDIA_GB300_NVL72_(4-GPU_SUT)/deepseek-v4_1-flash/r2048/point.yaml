@@ -1,0 +1,48 @@
+concurrency: 2048
+region: high_concurrency
+shared_src: src
+shared_docs: docs
+seed_set: A
+target_cohort: 2026-10-C1
+division: Standardized
+max_supported_concurrency: 2048
+model_name: deepseek-v4_1-flash
+model_precision: unspecified
+link_to_model: https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/tree/dba1be0a40aa45a94ad051997016db3960a90277
+link_to_model_transformation: null
+model_notes: null
+dataset_name: mlperf_agentic_inference_dataset
+dataset_type: Accuracy + Performance
+dataset_link: https://endpoints.mlcommons-storage.org/index.html#mlperf-agentic-inference
+dataset: mlperf_agentic_inference_dataset
+runtime_settings:
+  load_pattern: agentic_inference
+  target_concurrency: 2048
+  stream_all_chunks: false
+  runtime:
+    scheduler_rng_seed: 10487924139932647040
+    sample_index_rng_seed: 586478644936801402
+    # model_seed is not used: the client seeds only the scheduler and sample-index RNGs,
+    # and no rule defines what model_seed seeds. Declared from the bound seed set for the
+    # checker's seed-runtime-match only.
+    model_seed: 9315206023656308754
+warmup:
+  duration_s: 0
+  requests_issued: 0
+  requests_completed: 0
+  data_source: none; warmup disabled
+  concurrency: 0
+  initialization_steps: []
+offline: none
+speculative_decoding:
+  method: DSpark
+  params:
+    num_speculative_tokens: 5
+    draft_sample_method: probabilistic
+    rejection_sample_method: block
+    enable_adaptive_verification: true
+  model_id: deepseek-ai/DeepSeek-V4.1-Flash
+  weight_checksum: git-sha1:dba1be0a40aa45a94ad051997016db3960a90277
+nodes_used:
+- system_node_ensemble_id: 0
+  nodes: 1

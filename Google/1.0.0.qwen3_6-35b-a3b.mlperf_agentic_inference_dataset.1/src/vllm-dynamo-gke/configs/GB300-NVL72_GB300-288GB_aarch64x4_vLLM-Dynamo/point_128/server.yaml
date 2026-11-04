@@ -1,0 +1,329 @@
+# Complete vLLM settings for this point. Version pins come from dependencies.json.
+version: '0.1'
+artifacts:
+  SERVER_ENV:
+    uri: <workdir>
+    content: |
+      # Server environment for every worker (read by server.sh). Only values that differ from the vLLM defaults at VLLM_COMMIT.
+      # CUDA-graph capture hardening
+      CFIX=1
+      CFIX_RESET=1
+      # GDN deferred state commit
+      GDN_STATE_COMMIT=1
+      GDN_STATE_COMMIT_BUILD_DIR=${{ variables.SHARED_ROOT }}/caches/qwen-gb300/gsc-build
+      GDN_STATE_COMMIT_GB=1
+      GDN_STATE_COMMIT_GB_QO=1
+      GDN_STATE_COMMIT_MINB=4
+      # GDN step plan and spec/prefill overlap
+      GGM=1
+      GGM_LAZY=1
+      GGM_MDCHECK=300
+      GGM_MDREUSE=1
+      GGM_OG2=1
+      GGM_VSDIRECT=1
+      VLLM_GDN_FUSED_MD=1
+      # GDN layer graphs
+      VLLM_GDNP_SPEC_OVERLAP=2
+      VLLM_GDN_LAYER_GRAPHS=1
+      VLLM_GDN_LAYER_GRAPHS_DEVICE_NB=1
+      VLLM_GDN_LAYER_GRAPHS_MODE=layer
+      VLLM_GDN_LAYER_GRAPHS_TPH=4
+      VLLM_GDN_LAYER_GRAPHS_VSF_KEY=1
+      # GDN conv and chunked prefill
+      GDN_CONV_CUDA_BUILD_DIR=${{ variables.SHARED_ROOT }}/caches/qwen-gb300/gdn-conv-build
+      GDN_CONV_CUDA_MIXED_ADD=0
+      VLLM_GDN_CONV_CUDA=1
+      VLLM_GDN_FI_CP_POOL=1
+      VLLM_GDN_FI_VSPLIT=1
+      VLLM_GDN_FI_VSPLIT_V1=1
+      VLLM_GDN_VSPLIT_C1REORDER=1
+      VLLM_GDN_VSPLIT_CG0SPLIT=1
+      # KV copy, prefix cache and Mamba checkpoints
+      VLLM_FUSED_KV_BLOCK_COPY_MULTI=1
+      VLLM_FUSED_KV_BLOCK_COPY_TABLE_CACHE=1
+      VLLM_MAMBA_DROP_SUPERSEDED_STATE=1
+      VLLM_MAMBA_PIN_OWN_CKPT=1
+      VLLM_MAMBA_TAIL_CKPT=1
+      VLLM_MAMBA_TAIL_CKPT_MAX_RUNNING=60
+      VLLM_SUFFIX_TOKEN_STAGING=256
+      # Norm/quant fusion and MoE
+      F121=1
+      GS2_ROUTE=1
+      GS2_ROUTE_LOG=1
+      GS2_ROUTE_MAXN=11520
+      GS2_ROUTE_TAG=gs2r3
+      LCD2_BF16=tiny
+      LCD2_PDL=1
+      NQF=1
+      QGF_FIN=1
+      SEG_FOLD=1
+      VLLM_FLASHINFER_MOE_ROUTING_MODULE_CACHE=${{ variables.SHARED_ROOT }}/caches/qwen-gb300/fi-moe-modules
+      VLLM_MOE_FINALIZE_FOLD_MAX_M=1000000
+      VLLM_SEG_MODE=scale
+      # Elementwise and glue kernels
+      EWS=1
+      EWS_QKV_TPP=2
+      GLUE_EWS_CUDA=1
+      GLUE_EWS_CUDA_BUILD_DIR=${{ variables.SHARED_ROOT }}/caches/qwen-gb300/ews-build
+      GLUE_EWS_CUDA_MIN_T=1024
+      GLUE_EWS_CUDA_PDL=1
+      GLUE_EWS_CUDA_PW_MIN_T=256
+      GLUE_EWS_NOGATE=1
+      GLUE_EWS_TPP_SPLIT=1024
+      GLUE_FNQ_F0=1
+      GLUE_FNQ_XB=1
+      GLUE_GMRR=1
+      GLUE_GNQ_CFG=1,2048
+      GLUE_GSC_QO=1
+      GLUE_LAZY=1
+      GLUE_NQRR=1
+      # Attention (prefill routing, decode split-KV, prefill/decode overlap)
+      FI_DECODE_SPLITKV=auto
+      FMHA107=1
+      FMHA107_F107=0
+      FMHA107_LOG=1
+      FMHA107_MIN_KV=0
+      FMHA107_MIN_TOKENS=512
+      FMHA_GEN=1
+      FMHA_GEN_RULE=gb300
+      VLLM_ATTN_PD_OVERLAP=1
+      VLLM_ATTN_PD_WAVE_GATE=1
+      # Programmatic dependent launch
+      LCD_FI_OVERLAY=1
+      LCD_PDL_TRITON=1
+      PFW=1
+      PFWS=1
+      PFWS_TRIG=1
+      PFW_TRIG=1
+      # Spec decode and sampling
+      VLLM_DRAFT_LMH_DTYPE=mxfp8
+      VLLM_DRAFT_LMH_VOCAB=0-98304,248044-248070
+      VLLM_MTP_DRAFT_PREFILL_PRUNE=1
+      VLLM_SAMPLER_GRAPH=1
+      VLLM_SAMPLER_GRAPH_PRECAPTURE=1-8
+      VLLM_SAMPLER_GRAPH_PRECAPTURE_PARAMS=temperature=1.0,top_k=20,top_p=0.95,presence_penalty=1.5
+      VLLM_SAMPLER_STATE_DIRTY=1
+      VLLM_SPARSE_VERIFY_SAMPLING=1
+      # Engine host path
+      FEH=1
+      VLLM_FEH_MEMO=1
+      # FlashInfer autotune: seed the (fresh, per-run) cache with this system's pinned file
+      VLLM_FLASHINFER_AUTOTUNE_FILE=${{ variables.QWEN_SHARED_DIR }}/autotune/GB300-NVL72.json
+  SERVER_CONFIG:
+    content: |
+      model: ${{ variables.MODEL_PATH }}
+      dtype: bfloat16
+      quantization: mxfp8
+      quantization-config:
+        ignore:
+        - re:^(?:model\.)?visual(?:\..*)?$
+        - re:(?:.*\.)?lm_head$
+        - re:(?:.*\.)?embed_tokens$
+        - re:.*\.(?:input_layernorm|post_attention_layernorm)$
+        - re:.*\.mlp\.(?:gate|shared_expert_gate)$
+        - re:.*\.linear_attn\.(?:A_log|conv1d|dt_bias|in_proj_a|in_proj_b|in_proj_ba|norm)$
+        - re:.*\.self_attn\.(?:k_norm|q_norm)$
+        - re:(?:.*\.)?mtp\.(?:fc|norm|pre_fc_norm_embedding|pre_fc_norm_hidden)$
+      revision: ${{ variables.MODEL_REVISION }}
+      served-model-name: Qwen/Qwen3.6-35B-A3B
+      host: 0.0.0.0
+      port: ${{ variables.PORT }}
+      trust-remote-code: true
+      seed: 42
+      max-model-len: 262144
+      gpu-memory-utilization: 0.9
+      enable-prefix-caching: true
+      mamba-ssm-cache-dtype: float32
+      language-model-only: true
+      limit-mm-per-prompt:
+        image: 0
+        video: 0
+      enable-auto-tool-choice: true
+      tool-call-parser: qwen3_xml
+      reasoning-parser: qwen3
+      enable-prompt-tokens-details: true
+      max-num-batched-tokens: ${{ variables.MAX_NUM_BATCHED_TOKENS }}
+      max-num-seqs: 256
+      moe-backend: flashinfer_trtllm
+      speculative-config:
+        method: qwen3_next_mtp
+        num_speculative_tokens: 3
+      tensor-parallel-size: 1
+      data-parallel-size: 1
+      kv-cache-dtype: fp8
+      async-scheduling: true
+      enable-chunked-prefill: true
+      attention-backend: flashinfer
+      disable-uvicorn-access-log: true
+      # Partial-tail GDN checkpoints at 32 tokens (PMU32) and the
+      # FlashInfer GDN prefill backend; the capture list above has 163 sizes (ends at MNBT).
+      prefix-match-unit: 32
+      additional-config:
+        gdn_prefill_backend: flashinfer
+      compilation-config:
+        cudagraph_mode: FULL_AND_PIECEWISE
+        cudagraph_capture_sizes:
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+        - 8
+        - 12
+        - 16
+        - 20
+        - 24
+        - 28
+        - 32
+        - 36
+        - 40
+        - 48
+        - 56
+        - 64
+        - 72
+        - 80
+        - 88
+        - 96
+        - 104
+        - 112
+        - 120
+        - 128
+        - 136
+        - 144
+        - 152
+        - 160
+        - 168
+        - 176
+        - 184
+        - 192
+        - 200
+        - 208
+        - 216
+        - 224
+        - 232
+        - 240
+        - 248
+        - 256
+        - 272
+        - 288
+        - 304
+        - 320
+        - 336
+        - 352
+        - 368
+        - 384
+        - 400
+        - 416
+        - 432
+        - 448
+        - 464
+        - 480
+        - 496
+        - 512
+        - 528
+        - 544
+        - 560
+        - 576
+        - 592
+        - 608
+        - 624
+        - 640
+        - 656
+        - 672
+        - 688
+        - 704
+        - 720
+        - 736
+        - 752
+        - 768
+        - 784
+        - 800
+        - 816
+        - 832
+        - 848
+        - 864
+        - 880
+        - 896
+        - 912
+        - 928
+        - 944
+        - 960
+        - 976
+        - 992
+        - 1008
+        - 1024
+        - 1152
+        - 1280
+        - 1408
+        - 1536
+        - 1664
+        - 1792
+        - 1920
+        - 2048
+        - 2176
+        - 2304
+        - 2432
+        - 2560
+        - 2688
+        - 2816
+        - 2944
+        - 3072
+        - 3200
+        - 3328
+        - 3456
+        - 3584
+        - 3712
+        - 3840
+        - 3968
+        - 4096
+        - 4352
+        - 4608
+        - 4864
+        - 5120
+        - 5376
+        - 5632
+        - 5888
+        - 6144
+        - 6400
+        - 6656
+        - 6912
+        - 7168
+        - 7424
+        - 7680
+        - 7936
+        - 8192
+        - 8704
+        - 9216
+        - 9728
+        - 10240
+        - 10752
+        - 11264
+        - 11776
+        - 12288
+        - 12800
+        - 13312
+        - 13824
+        - 14336
+        - 14848
+        - 15360
+        - 15872
+        - 16384
+        - 17408
+        - 18432
+        - 19456
+        - 20480
+        - 21504
+        - 22528
+        - 23552
+        - 24576
+        - 25600
+        - 26624
+        - 27648
+        - 28672
+        - 29696
+        - 30720
+        - 31744
+        - ${{ variables.MAX_NUM_BATCHED_TOKENS }}
+    uri: <workdir>

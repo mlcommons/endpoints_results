@@ -1,0 +1,35 @@
+# Adapted for this benchmark from llm-d-router v0.10.0 examples.
+# llm-d-router is licensed under Apache-2.0:
+# https://github.com/llm-d/llm-d-router/tree/v0.10.0
+apiVersion: llm-d.ai/v1alpha1
+kind: EndpointPickerConfig
+plugins:
+  - type: file-discovery
+    parameters:
+      path: /etc/epp/endpoints.yaml
+
+  - type: session-affinity-filter
+    parameters:
+      strategy: session_id
+      sessionIdConfig:
+        evictionTtlSeconds: __SESSION_TTL_SECONDS__
+
+  - type: active-request-scorer
+
+  - type: token-producer
+    parameters:
+      estimate: {}
+
+  - type: openai-parser
+
+  - type: passthrough-parser
+
+requestHandler:
+  parsers:
+    - pluginRef: openai-parser
+    - pluginRef: passthrough-parser
+
+dataLayer:
+  injectDefaults: false
+  discovery:
+    pluginRef: file-discovery

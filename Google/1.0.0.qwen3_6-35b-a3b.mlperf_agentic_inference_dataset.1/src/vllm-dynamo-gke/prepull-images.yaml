@@ -1,0 +1,64 @@
+# Pre-pull the Qwen3.6-35B-A3B v1.0.3 run images onto every <nodepool> node.
+#
+# Why: a cold pull of the CentML vLLM + ai-dynamo server image happens while
+# sflow's reservation timeout and the serve_endpoint readiness probe are
+# already counting. This makes the pull a one-time cost AND a scheduling
+# rehearsal: a wrong architecture, a missing pull Secret or an unreachable
+# registry surfaces here as ImagePullBackOff instead of inside a run.
+#
+# SERVER image is PRIVATE (NVIDIA partner registry on gitlab):
+#   create the `gitlab-partner-registry` docker-registry Secret from
+#   <workdir>/.config/nv-partner/gitlab.netrc before applying, and delete after prepull.
+#
+# CLIENT image is public: ghcr.io/mlcommons/endpoints@sha256:1523051b... is the
+# multi-arch index of tag d3c57f2 (dependencies.json CLIENT_IMAGE_DIGEST).
+#
+# Both are pinned BY DIGEST, identical to the recipes' SERVER_IMAGE / CLIENT_IMAGE.
+#
+#   kubectl apply -f prepull-images.yaml
+#   kubectl rollout status ds/prepull-qwen36-images --timeout=45m
+#   kubectl delete -f prepull-images.yaml      # cached layers stay on the node
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: prepull-qwen36-images
+  namespace: default
+  labels:
+    app: prepull-qwen36-images
+spec:
+  selector:
+    matchLabels:
+      app: prepull-qwen36-images
+  template:
+    metadata:
+      labels:
+        app: prepull-qwen36-images
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      imagePullSecrets:
+        - name: gitlab-partner-registry
+      # Sequential init containers: one multi-GB pull per node at a time.
+      initContainers:
+        - name: pull-server
+          image: registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/centml-gb300-rubin@sha256:cb0b77df93c0f9d89b8bca7f59a2520e582b9dbebdd606f7d9f36f57632a8b71
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "echo PULLED server on $(uname -m)"]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      containers:
+        - name: pull-client
+          image: ghcr.io/mlcommons/endpoints@sha256:1523051b141437b25083924d6428082f435713516eee71c54ae207b393900b2d
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "echo PREPULL COMPLETE on $(uname -m); sleep infinity"]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      terminationGracePeriodSeconds: 0

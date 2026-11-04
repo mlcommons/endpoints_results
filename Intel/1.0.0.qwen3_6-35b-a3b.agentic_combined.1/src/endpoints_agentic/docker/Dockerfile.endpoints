@@ -1,0 +1,75 @@
+# The launcher always overrides this sentinel with the pinned endpoint digest.
+ARG ENDPOINT_BASE_IMAGE=scratch
+FROM ${ENDPOINT_BASE_IMAGE}
+
+ARG AGENTIC_DATASET_SHA256
+
+USER root
+
+RUN apt-get update -o APT::Update::Error-Mode=any \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        docker-cli wget \
+    && rm -rf /var/lib/apt/lists/* \
+    && UV_PROJECT_ENVIRONMENT=/opt/swebench-venv \
+        UV_COMPILE_BYTECODE=0 UV_CONCURRENT_INSTALLS=4 UV_CONCURRENT_DOWNLOADS=4 uv sync \
+        --project /mnt/inference-endpoint/src/inference_endpoint/evaluation/swebench_service \
+        --frozen
+
+RUN set -eu; \
+    dataset_dir=/workspace/dataset_cache/agentic_inference_conversations; \
+    mkdir -p "${dataset_dir}"; \
+    curl --fail --location --silent --show-error --retry 3 \
+        --output /tmp/mlc-r2-downloader.sh \
+        https://raw.githubusercontent.com/mlcommons/r2-downloader/c0af791293158b7ac67c71ef0b2765fcc2194ea9/mlc-r2-downloader.sh; \
+    bash /tmp/mlc-r2-downloader.sh \
+        -d "${dataset_dir}" \
+        https://endpoints.mlcommons-storage.org/metadata/mlperf_agentic_inference_dataset.uri; \
+    printf '%s  %s\n' "${AGENTIC_DATASET_SHA256}" \
+        "${dataset_dir}/mlperf_agentic_inference_dataset.jsonl" \
+        | sha256sum --check --status; \
+    rm -f /tmp/mlc-r2-downloader.sh
+
+RUN chmod 1777 /workspace/dataset_cache \
+    && rm -rf /mnt/inference-endpoint/src/inference_endpoint/evaluation/legacy_mlperf_deepseek_r1
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        git jq dmidecode psmisc numactl util-linux procps \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG MLCFLOW_VERSION
+ARG MLC_AUTOMATIONS_REF
+COPY lib/prepare_mlcflow.sh /opt/mlcflow-setup/lib/prepare_mlcflow.sh
+COPY configs/mlcflow.conf /opt/mlcflow-setup/configs/mlcflow.conf
+ENV PATH="/opt/mlcflow-venv/bin:${PATH}"
+LABEL org.mlcommons.mlcflow.version="${MLCFLOW_VERSION}" \
+    org.mlcommons.mlperf-automations.revision="${MLC_AUTOMATIONS_REF}"
+RUN UV_COMPILE_BYTECODE=0 \
+    UV_CONCURRENT_INSTALLS=4 \
+    UV_CONCURRENT_DOWNLOADS=4 \
+    MLCFLOW_BUILD_VERSION="${MLCFLOW_VERSION}" \
+    MLC_AUTOMATIONS_BUILD_REF="${MLC_AUTOMATIONS_REF}" \
+    sh -ec '\
+        . /opt/mlcflow-setup/configs/mlcflow.conf; \
+        test "${MLCFLOW_VERSION}" = "${MLCFLOW_BUILD_VERSION}"; \
+        test "${MLC_AUTOMATIONS_REF}" = "${MLC_AUTOMATIONS_BUILD_REF}"; \
+        bash /opt/mlcflow-setup/lib/prepare_mlcflow.sh \
+            /opt/mlcflow-venv /opt/mlperf-automations; \
+        git config --system --add safe.directory /opt/mlperf-automations'
+RUN export UV_COMPILE_BYTECODE=0 \
+    && uv pip install --python /opt/venv/bin/python \
+        "fsspec==2026.6.0" \
+        "urllib3==2.8.0" \
+        "virtualenv==21.7.13" \
+    && uv pip install --python /opt/swebench-venv/bin/python \
+        "GitPython==3.1.60" \
+        "aiohttp==3.14.3" \
+        "datasets==5.0.1" \
+        "fsspec==2026.6.0" \
+        "urllib3==2.8.0" \
+        "virtualenv==21.7.13" \
+    && uv pip uninstall --python /opt/venv/bin/python pip pip-audit pip-api \
+    && rm -rf /root/.cache/uv /home/appuser/.cache/uv
+
+USER appuser

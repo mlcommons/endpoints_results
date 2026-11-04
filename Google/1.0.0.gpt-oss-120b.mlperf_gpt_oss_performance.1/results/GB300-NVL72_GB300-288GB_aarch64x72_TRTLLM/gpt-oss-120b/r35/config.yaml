@@ -1,0 +1,105 @@
+name: gpt-oss-120b-c35
+version: '1.0'
+type: submission
+submission_ref:
+  model: gpt-oss-120b
+  ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+benchmark_mode: online
+model_params:
+  name: /mnt/stateful_partition/kube-ephemeral-ssd/model-cache/gpt-oss-120b
+  temperature: 1.0
+  seed: 9315206023656308754
+  top_k: 0
+  top_p: 1.0
+  max_new_tokens: 10240
+  min_new_tokens: 1
+  skip_special_tokens: true
+  streaming: 'on'
+datasets:
+- name: perf
+  type: performance
+  path: /mnt/stateful_partition/kube-ephemeral-ssd/mlperf-data/gpt-oss/v4/perf/perf_eval_ref.parquet
+  parser:
+    input_tokens: input_tokens
+  generation_config_override:
+    max_new_tokens: 10240
+- name: aime25::gptoss
+  type: accuracy
+  accuracy_config:
+    eval_method: pass_at_1
+    ground_truth: answer
+    extractor: boxed_math_extractor
+    num_repeats: 8
+  generation_config_override:
+    max_new_tokens: 32768
+- name: gpqa::gptoss
+  type: accuracy
+  accuracy_config:
+    eval_method: pass_at_1
+    ground_truth: ground_truth
+    extractor: abcd_extractor
+    num_repeats: 5
+  generation_config_override:
+    max_new_tokens: 32768
+- name: livecodebench::gptoss
+  type: accuracy
+  accuracy_config:
+    eval_method: code_bench_scorer
+    extractor: python_code_extractor
+    num_repeats: 3
+  generation_config_override:
+    max_new_tokens: 32768
+settings:
+  runtime:
+    max_issue_duration_ms: 13200000
+    n_samples_to_issue: 38376
+    scheduler_random_seed: 10487924139932647040
+    dataloader_random_seed: 586478644936801402
+  load_pattern:
+    type: concurrency
+    target_concurrency: 35
+  client:
+    num_workers: 16
+    log_level: WARN
+    warmup_connections: -1
+    auto_warmup_budget_fraction: 0.25
+    max_concurrent_warmup_connects: 128
+    max_connections: -1
+    transport:
+      type: zmq
+      recv_buffer_size: 16777216
+      send_buffer_size: 16777216
+      io_threads: 4
+      worker_io_threads: 1
+      high_water_mark: 0
+      linger: -1
+      immediate: 1
+    stream_all_chunks: false
+    worker_initialization_timeout: 300.0
+    worker_graceful_shutdown_wait: 0.5
+    worker_force_kill_timeout: 0.5
+    insecure: false
+    max_idle_time: 4.0
+    min_required_connections: -1
+    worker_gc_mode: disabled
+  timeouts:
+    run_timeout_s: 16200.0
+    interrupted_teardown_grace_s: 30.0
+    service_ready_timeout_s: 30.0
+    warmup_drain_timeout_s: 240.0
+  warmup:
+    enabled: false
+    salt: false
+    drain: false
+    warmup_random_seed: 586478644936801402
+  profiling: {}
+  early_stopping:
+    enabled: true
+  metrics_tokenizer_workers: 32
+endpoint_config:
+  endpoints:
+  - http://192.168.0.113:8000
+  api_type: openai_completions
+report_dir: /mnt/stateful_partition/kube-ephemeral-ssd/gptoss-reports/trtllm_disagg_gptoss_gke-20261015-221313-79b5b5
+verbose: false
+enable_cpu_affinity: true

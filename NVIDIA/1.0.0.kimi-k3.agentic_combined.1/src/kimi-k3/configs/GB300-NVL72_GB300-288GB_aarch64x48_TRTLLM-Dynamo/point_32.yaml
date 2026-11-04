@@ -1,0 +1,407 @@
+version: '0.1'
+variables:
+  ALLOCATION_SETUP:
+    value: []
+  ALLOCATION_CLEANUP:
+    value: []
+  NUMA_BIND:
+    value: 0
+  SEGMENT_NODES:
+    value: 2
+  MEMORY_CLOCK_MHZ:
+    value: 0
+  MEMORY_CLOCK_RESTORE:
+    value: ""
+  CONCURRENCY:
+    value: 32
+  NUM_TRAJECTORIES:
+    value: 613
+  NUM_CTX:
+    value: 1
+  NUM_GEN:
+    value: 3
+  GEN_GPUS:
+    value: 8
+  TOTAL_GPUS:
+    value: 32
+  TOTAL_NODES:
+    value: 8
+  CTX_GPUS:
+    value: 8
+  DRAFT_HEAD:
+    value: sglang
+  FRONTEND_NODE:
+    value: 2
+  CLIENT_NODE:
+    value: 2
+  DYNAMO_REQUEST_PLANE:
+    value: tcp
+  DYNAMO_DECODE_ENTRY:
+    value: /opt/k3-dynamo/helpers/dynamo_entry_v4.py
+  DYNAMO_DECODE_ROUTER_MODE:
+    value: round-robin
+  DYNAMO_DECODE_EXTRA_ARGS:
+    value: ''
+  BENCHMARK_MODE:
+    value: both
+  SWE_ROOT:
+    value: ${{ variables.RESULTS_PATH }}/swe
+  SWE_IMAGE_REGISTRY:
+    description: The partner registry's ARM64 SWE-bench images; set your own mirror with --set.
+    value: registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/swebench-arm64
+artifacts:
+- name: CLIENT_CONFIG
+  uri: file://client.yaml
+  content: |
+    name: kimi-k3-c32
+    version: '1.0'
+    type: online
+    submission_ref:
+      model: kimi-k3
+      ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+    model_params:
+      name: /models/kimi-k3
+      tokenizer_name: /models/kimi-k3
+      temperature: 1.0
+      top_p: 1.0
+      max_new_tokens: 8192
+      streaming: 'on'
+    datasets:
+    - name: agentic_combined
+      type: performance
+      path: /data/agentic_combined_v6.jsonl
+      accuracy_config:
+        eval_method: agentic_inference_inline
+      agentic_inference:
+        enable_salt: true
+        inject_tool_delay: true
+        num_trajectories_to_issue: 613
+    - name: swe_bench
+      type: accuracy
+      accuracy_config:
+        eval_method: swe_bench_scorer
+        extras:
+          swebench_service_url: ${SWEBENCH_SERVICE_URL}
+          swebench_service_auth_token: ${SWEBENCH_SERVICE_AUTH_TOKEN}
+          num_instances: 200
+          workers: 16
+    settings:
+      load_pattern:
+        type: agentic_inference
+        target_concurrency: 32
+      client:
+        num_workers: 4
+        warmup_connections: 0
+        max_idle_time: 0.5
+        worker_initialization_timeout: 600.0
+      metrics_isl: false
+    endpoint_config:
+      endpoints:
+      - http://127.0.0.1:8000
+      api_type: openai
+    report_dir: /results/report
+- name: PREFILL_CONFIG
+  uri: file://prefill.yaml
+  content: |
+    tensor_parallel_size: 8
+    moe_expert_parallel_size: 8
+    pipeline_parallel_size: 1
+    enable_attention_dp: false
+    trust_remote_code: true
+    max_batch_size: 16
+    max_num_tokens: 16384
+    max_seq_len: 262144
+    enable_chunked_prefill: true
+    disable_overlap_scheduler: true
+    cuda_graph_config: null
+    moe_config:
+      backend: CUTEDSL
+      max_num_tokens: 8192
+      use_low_precision_moe_combine: true
+    kv_cache_config:
+      dtype: fp8
+      tokens_per_block: 64
+      mamba_ssm_cache_dtype: bfloat16
+      use_kv_cache_manager_v2: true
+      enable_block_reuse: true
+      block_reuse_config:
+        policy: per_conversation
+        max_num_turns: 1
+      mamba_state_config:
+        periodic_snapshot_interval: 0
+        additional_snapshot_offsets_from_end:
+        - 0
+      free_gpu_memory_fraction: 0.7
+      host_cache_size: 171798691840
+    cache_transceiver_config:
+      backend: NIXL
+      transceiver_runtime: PYTHON
+      max_tokens_in_buffer: 1048576
+      kv_transfer_timeout_ms: 600000
+    num_serve_frontends: 8
+    stream_interval: 10
+    return_perf_metrics: false
+    print_iter_log: false
+    enable_iter_perf_stats: true
+    enable_iter_req_stats: false
+    gpus_per_node: 4
+- name: DECODE_CONFIG
+  uri: file://decode.yaml
+  content: |
+    tensor_parallel_size: 1
+    pipeline_parallel_size: 1
+    enable_attention_dp: false
+    trust_remote_code: true
+    context_parallel_size: 8
+    moe_expert_parallel_size: 8
+    cp_config:
+      cp_type: HELIX
+      fifo_version: 2
+      tokens_per_block: 64
+      use_nccl_for_alltoall: false
+    max_batch_size: 16
+    max_num_tokens: 64
+    max_seq_len: 262144
+    cuda_graph_config:
+      batch_sizes:
+      - 1
+      - 2
+      - 4
+      - 8
+      - 16
+      enable_padding: true
+    speculative_config:
+      decoding_type: DSpark
+      speculative_model: /models/kimi-k3-dspark
+      max_draft_len: 3
+      block_size: 3
+    moe_config:
+      backend: CUTEDSL
+      use_low_precision_moe_combine: true
+    kv_cache_config:
+      dtype: fp8
+      tokens_per_block: 64
+      mamba_ssm_cache_dtype: bfloat16
+      use_kv_cache_manager_v2: true
+      enable_block_reuse: false
+      mamba_state_config:
+        periodic_snapshot_interval: 0
+        additional_snapshot_offsets_from_end:
+        - 0
+      free_gpu_memory_fraction: 0.8
+      host_cache_size: 0
+    cache_transceiver_config:
+      backend: NIXL
+      transceiver_runtime: PYTHON
+      max_tokens_in_buffer: 1048576
+      kv_cache_bounce_size_mb: 0
+      kv_transfer_timeout_ms: 600000
+    num_postprocess_workers: 4
+    num_serve_frontends: 8
+    stream_interval: 100
+    return_perf_metrics: false
+    print_iter_log: false
+    enable_iter_perf_stats: false
+    enable_iter_req_stats: false
+    gpus_per_node: 4
+- name: PREFILL_ENV
+  uri: file://prefill-env.yaml
+  content: |
+    TRTLLM_SERVER_DISABLE_GC: '1'
+    TRTLLM_WORKER_DISABLE_GC: '1'
+    NCCL_GRAPH_MIXING_SUPPORT: '0'
+    MIMALLOC_ARENA_RESERVE: '0'
+    OMP_NUM_THREADS: '1'
+    HF_HUB_TRUST_REMOTE_CODE: '1'
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    KIMI_K3_MLA_MAX_POSITIONS: '262144'
+    KIMI_K3_ATTN_RES_TOPOLOGY: '1'
+    TRTLLM_KV_TRANSFER_NUM_THREADS: '8'
+    TRTLLM_SERVE_ENABLE_MSGSPEC: '1'
+    WORKER_CPU_AFFINITY: numa
+    KIMI_K3_FP8_WEIGHT_READ_MOE_MLP: '1'
+    TRTLLM_MOE_A2A_FORCE_CFT: '0'
+    CUDA_SCALE_LAUNCH_QUEUES: 4x
+    TLLM_V2_CTX_COST_KV_OFFSET: '114000'
+    TLLM_V2_CTX_COST_KV_DEPTH_THRESHOLD: '143000'
+    TRTLLM_CUTEDSL_SM_RESERVE: '30'
+    TLLM_MOE_ASYNC_INPUT_QUANT: '0'
+    TRTLLM_DWDP_PREFETCH_GATHER: '1'
+    TRTLLM_DWDP_GATHER_KERNEL: tma
+    TRTLLM_DWDP_GATHER_THREADS: '128'
+    TLLM_AUTOTUNER_MULTIPROCESS: '0'
+    TLLM_FMHA_LIBS: -flashinfer_trtllm_gen
+    UCX_TLS: all
+    K3_TOKENIZER_FASTPATH: '1'
+    UCX_RNDV_SCHEME: put_zcopy
+    UCX_CUDA_IPC_ENABLE_MNNVL: n
+- name: DECODE_ENV
+  uri: file://decode-env.yaml
+  content: |
+    TRTLLM_SERVER_DISABLE_GC: '1'
+    TRTLLM_WORKER_DISABLE_GC: '1'
+    NCCL_GRAPH_MIXING_SUPPORT: '0'
+    MIMALLOC_ARENA_RESERVE: '0'
+    OMP_NUM_THREADS: '1'
+    HF_HUB_TRUST_REMOTE_CODE: '1'
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    WORKER_CPU_AFFINITY: numa
+    KIMI_K3_MLA_MAX_POSITIONS: '262144'
+    KIMI_K3_ATTN_RES_TOPOLOGY: '1'
+    KIMI_K3_FP8_WEIGHT_READ_MOE_MLP: '1'
+    TRTLLM_KV_TRANSFER_NUM_THREADS: '8'
+    TRTLLM_SERVE_ENABLE_MSGSPEC: '1'
+    TRTLLM_MOE_A2A_FORCE_CFT: '0'
+    UCX_TLS: all
+    K3_TOKENIZER_FASTPATH: '1'
+    UCX_RNDV_SCHEME: put_zcopy
+    UCX_CUDA_IPC_ENABLE_MNNVL: n
+- name: ROUTER_ENV
+  uri: file://frontend-env.yaml
+  content: |
+    TRTLLM_SERVE_ENABLE_MSGSPEC: '1'
+workflow:
+  tasks:
+  - name: frontend
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1 TMPDIR=/tmp
+    - export HF_MODULES_CACHE="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/hf-modules"
+    - export XDG_CACHE_HOME="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/cache"
+    - export TLLM_AUTOTUNER_CACHE_PATH="$XDG_CACHE_HOME/autotuner.json"
+    - mkdir -p "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+    - export ETCD_ENDPOINTS="${HEAD_NODE_IP}:2379" NATS_SERVER="nats://${HEAD_NODE_IP}:4222" DYN_NAMESPACE="k3-${SLURM_JOB_ID}"
+    - export DYN_SYSTEM_PORT=9200
+    - export DYN_RUNTIME_NUM_WORKER_THREADS=8 DYN_RUNTIME_MAX_BLOCKING_THREADS=16
+    - export PYTHONPATH="/opt/k3-dynamo/frontend"
+    - python3 -c 'import dynamo._core,os,hashlib;from pathlib import Path;p=Path(dynamo._core.__file__).resolve();assert
+      str(p).startswith(str(Path(os.environ["PYTHONPATH"]).resolve())+"/");assert hashlib.sha256(p.read_bytes()).hexdigest()==__import__("os").environ["DYNAMO_FRONTEND_CORE_SHA256"];print("FRONTEND_RUNTIME_CORE",p,hashlib.sha256(p.read_bytes()).hexdigest())'
+    - echo DYNAMO_FRONTEND_STARTING
+    - exec python3 -m dynamo.frontend --namespace "$DYN_NAMESPACE" --http-host 0.0.0.0 --http-port 8000 --discovery-backend
+      etcd --request-plane ${{ variables.DYNAMO_REQUEST_PLANE }} --event-plane nats --model-name /models/kimi-k3
+      --model-path /models/kimi-k3 --trust-remote-code --dyn-chat-processor dynamo --router-mode ${{ variables.DYNAMO_DECODE_ROUTER_MODE
+      }} --migration-limit 0
+  - name: prefill
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1 TMPDIR=/tmp
+    - export ETCD_ENDPOINTS="${HEAD_NODE_IP}:2379" NATS_SERVER="nats://${HEAD_NODE_IP}:4222" DYN_NAMESPACE="k3-${SLURM_JOB_ID}"
+    - export DYN_SYSTEM_PORT=$((9210 + SFLOW_REPLICA_INDEX))
+    - export HF_MODULES_CACHE="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/hf-modules"
+    - export XDG_CACHE_HOME="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/cache"
+    - export TLLM_AUTOTUNER_CACHE_PATH="$XDG_CACHE_HOME/autotuner.json"
+    - mkdir -p "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+    - ENV_EXPORTS=$(python3 "${SFLOW_TOOLS}/run_with_env.py" "${PREFILL_ENV}")
+    - eval "$ENV_EXPORTS"
+    - unset UCX_NET_DEVICES
+    - |-
+      python3 - <<'PYCFG'
+      import os,yaml
+      from pathlib import Path
+      root=Path(os.environ['SFLOW_TASK_OUTPUT_DIR'])
+      cfg=yaml.safe_load(Path(os.environ['PREFILL_CONFIG']).read_text())
+      for key in ('num_serve_frontends','reasoning_parser'): cfg.pop(key,None)
+      if cfg.get('return_perf_metrics',False):
+          cfg['perf_metrics_output_dir']=str(root/'perf-metrics')
+      (root/('server-timing-'+os.environ.get('SLURM_PROCID','0')+'.yaml')).write_text(yaml.safe_dump(cfg,sort_keys=False))
+      PYCFG
+    - if [ "$CTX_GPUS" = 1 ]; then export TRTLLM_DWDP_RANK="$SFLOW_REPLICA_INDEX" TRTLLM_DWDP_MASTER_ADDR="$HEAD_NODE_IP";
+      fi
+    - exec trtllm-llmapi-launch env -u UCX_NET_DEVICES UCX_TLS="$UCX_TLS" python3 -m dynamo.trtllm --model /models/kimi-k3
+      --served-model-name /models/kimi-k3 --namespace "$DYN_NAMESPACE" --discovery-backend etcd --request-plane
+      ${{ variables.DYNAMO_REQUEST_PLANE }} --event-plane nats --disaggregation-mode prefill --extra-engine-args
+      "${SFLOW_TASK_OUTPUT_DIR}/server-timing-${SLURM_PROCID:-0}.yaml" --publish-metrics --no-publish-kv-events
+      --dyn-reasoning-parser kimi_k3 --dyn-tool-call-parser kimi_k3 --router-mode least-loaded --conversation-affinity
+      --conversation-affinity-dp-rank-source engine --router-session-affinity-ttl-secs 14400 --router-session-affinity-mode
+      hard
+  - name: decode
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1 TMPDIR=/tmp
+    - export ETCD_ENDPOINTS="${HEAD_NODE_IP}:2379" NATS_SERVER="nats://${HEAD_NODE_IP}:4222" DYN_NAMESPACE="k3-${SLURM_JOB_ID}"
+    - export DYN_SYSTEM_PORT=$((9310 + SFLOW_REPLICA_INDEX))
+    - export HF_MODULES_CACHE="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/hf-modules"
+    - export XDG_CACHE_HOME="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/cache"
+    - export TLLM_AUTOTUNER_CACHE_PATH="$XDG_CACHE_HOME/autotuner.json"
+    - mkdir -p "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+    - ENV_EXPORTS=$(python3 "${SFLOW_TOOLS}/run_with_env.py" "${DECODE_ENV}")
+    - eval "$ENV_EXPORTS"
+    - unset UCX_NET_DEVICES
+    - |-
+      python3 - <<'PYCFG'
+      import os,yaml
+      from pathlib import Path
+      root=Path(os.environ['SFLOW_TASK_OUTPUT_DIR'])
+      cfg=yaml.safe_load(Path(os.environ['DECODE_CONFIG']).read_text())
+      for key in ('num_serve_frontends','reasoning_parser'): cfg.pop(key,None)
+      if cfg.get('return_perf_metrics',False):
+          cfg['perf_metrics_output_dir']=str(root/'perf-metrics')
+      (root/('server-timing-'+os.environ.get('SLURM_PROCID','0')+'.yaml')).write_text(yaml.safe_dump(cfg,sort_keys=False))
+      PYCFG
+    - exec trtllm-llmapi-launch env -u UCX_NET_DEVICES UCX_TLS="$UCX_TLS" python3 ${{ variables.DYNAMO_DECODE_ENTRY
+      }} --model /models/kimi-k3 --served-model-name /models/kimi-k3 --namespace "$DYN_NAMESPACE" --discovery-backend
+      etcd --request-plane ${{ variables.DYNAMO_REQUEST_PLANE }} --event-plane nats --disaggregation-mode decode
+      --extra-engine-args "${SFLOW_TASK_OUTPUT_DIR}/server-timing-${SLURM_PROCID:-0}.yaml" --no-publish-metrics
+      --no-publish-kv-events --dyn-reasoning-parser kimi_k3 --dyn-tool-call-parser kimi_k3 --router-mode ${{ variables.DYNAMO_DECODE_ROUTER_MODE
+      }} ${{ variables.DYNAMO_DECODE_EXTRA_ARGS }}
+  - name: client_gate
+    operator: client
+    resources:
+      nodes:
+        indices:
+        - ${{ variables.CLIENT_NODE }}
+    depends_on:
+    - preflight
+    - swe_service
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PATH="/opt/venv/bin:$PATH"
+    - eval "$(python3 -c 'import json,os,shlex;d=json.load(open(os.environ["SFLOW_WORKFLOW_OUTPUT_DIR"]+"/swe-connection.json"));print("export SWEBENCH_SERVICE_URL="+shlex.quote(d["url"])+" SWEBENCH_SERVICE_AUTH_TOKEN="+shlex.quote(d["token"]))')"
+    - python3 -c 'import sys,inference_endpoint;from inference_endpoint.config.schema import BenchmarkConfig;c=BenchmarkConfig.from_yaml_file(__import__("os").environ["CLIENT_CONFIG"]);print("OFFICIAL_CLIENT_CONFIG_PASS",sys.executable,inference_endpoint.__file__)'
+  - name: benchmark
+    operator: client
+    resources:
+      nodes:
+        indices:
+        - ${{ variables.CLIENT_NODE }}
+    depends_on:
+    - frontend
+    - swe_service
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - test "${FRONTEND_NODE_IP}" = "${SFLOW_TASK_ASSIGNED_NODE_IPS%%,*}"
+    - eval "$(python3 -c 'import json,os,shlex;d=json.load(open(os.environ["SFLOW_WORKFLOW_OUTPUT_DIR"]+"/swe-connection.json"));print("export SWEBENCH_SERVICE_URL="+shlex.quote(d["url"])+" SWEBENCH_SERVICE_AUTH_TOKEN="+shlex.quote(d["token"]))')"
+    - export PATH="/opt/venv/bin:$PATH"
+    - python3 -c 'import sys,inference_endpoint;print("OFFICIAL_CLIENT",sys.executable,inference_endpoint.__file__)'
+    - export HF_HUB_OFFLINE=0 TRANSFORMERS_OFFLINE=0 TOKENIZERS_PARALLELISM=false PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+    - python3 "${RECIPE}/scripts/node.py" wait-ready
+    - cp "${CLIENT_CONFIG}" "${SFLOW_WORKFLOW_OUTPUT_DIR}/launched-client.yaml"
+    - set +e
+    - /opt/venv/bin/python3 -m inference_endpoint.main benchmark from-config -c "${CLIENT_CONFIG}" --mode ${{ variables.BENCHMARK_MODE }}
+    - CLIENT_RC=$?
+    - printf "%s\n" "$CLIENT_RC" > "${SFLOW_WORKFLOW_OUTPUT_DIR}/benchmark-client-exit-code"
+    - exit "$CLIENT_RC"
+  - name: swe_service
+    operator: host
+    resources:
+      nodes:
+        indices:
+        - ${{ variables.CLIENT_NODE }}
+    depends_on:
+    - preflight
+    script:
+    - set -euo pipefail
+    - exec python3 "${{ variables.REPO_ROOT }}/NVIDIA/src/kimi-k3/scripts/swe_service.py"
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: SWE_READY
+        timeout: 900
+      failure:
+        log_watch:
+          regex_pattern: re:Traceback

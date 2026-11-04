@@ -1,0 +1,68 @@
+# Create the DeepSeek-V4.1-Flash node-local directories on every <nodepool> node.
+#
+#   dsv41-flash-reports/  REPORTS_ROOT: durable benchmark reports.  sflow's
+#                         normal path (pod emptyDir + EXIT trap + log sentinel)
+#                         has lost finished results before (guide F31); a
+#                         hostPath on the SSD survives the pod and the log stream.
+#   dsv41-flash-runtime/  RUNTIME_ROOT_HOST: replaces the Slurm shared FS the
+#                         drop uses for RECIPE_DIR (.cache/persist/* and
+#                         .cache/vllm/*) and per-run shared files (host_cpus.txt).
+#                         On GKE each pod has its own emptyDir, so this per-node
+#                         dir restores sharing across dynamo_frontend,
+#                         vllm_worker, and endpoint_client on node 0.
+#
+# Both must PRE-EXIST: sflow mounts fs:// with a strict `Directory` type and the
+# kubelet refuses the pod rather than creating it.
+#
+#   kubectl apply -f mk-report-dir.yaml
+#   kubectl rollout status ds/dsv41-flash-mk-dirs --timeout=300s
+#   kubectl delete -f mk-report-dir.yaml      # the directories persist
+#
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dsv41-flash-mk-dirs
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: dsv41-flash-mk-dirs
+  template:
+    metadata:
+      labels:
+        app: dsv41-flash-mk-dirs
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: mkdir
+          # Multi-arch with a shell (the nodes are arm64).
+          image: <registry>/cloudsdktool/google-cloud-cli:stable
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              for D in /host-ssd/dsv41-flash-reports /host-ssd/dsv41-flash-runtime; do
+                mkdir -p "$D"
+                chmod 1777 "$D"   # pods run as root; keep it open anyway
+                echo "ready: $(ls -ld "$D")"
+              done
+              sleep infinity
+          volumeMounts:
+            - name: host-ssd
+              mountPath: /host-ssd
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      volumes:
+        - name: host-ssd
+          hostPath:
+            path: <node-local-ssd>
+            type: Directory

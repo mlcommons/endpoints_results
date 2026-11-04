@@ -1,0 +1,60 @@
+# Optional performance-only overlay for GPU-only Slurm partitions.
+#
+# Use it last in the sflow file list.  The normal client_cpu backend remains in
+# the composed configuration, but changing it to local prevents SFlow from
+# acquiring a second Slurm allocation.  The actual benchmark step runs on the
+# server allocation and the helper applies the client CPU mask reserved by
+# dynamo_cpu_affinity.py.
+version: '0.1'
+variables:
+  MODE:
+    value: perf
+    domain:
+    - perf
+    description: Client colocation supports the performance phase only.
+  COLOCATED_STEP_CPUS:
+    value: ${{ 352 if variables.SYSTEM_ID.startswith('VR-') else variables.STEP_CPUS }}
+    type: integer
+    description: Full server-step CPU allocation so the client can select its reserved 8-core mask.
+  CLIENT_LAUNCHER:
+    value: ${{ variables.POINT_DIR }}/client.sh
+    description: Point client launcher.
+backends:
+  client_cpu:
+    type: local
+operators:
+  client:
+    type: srun
+    cpus_per_task: ${{ variables.COLOCATED_STEP_CPUS }}
+  client_host:
+    cpus_per_task: ${{ variables.COLOCATED_STEP_CPUS }}
+  colocate_preflight:
+    type: bash
+workflow:
+  tasks:
+  # Accuracy needs the long-running SWE service. For performance, replace it
+  # with a completed readiness dependency that needs no Slurm allocation.
+  - name: swe_service
+    backend: client_cpu
+    operator: colocate_preflight
+    script:
+    - |
+      test "$MODE" = perf
+      echo SWE_READY
+  - name: benchmark_0
+    backend: cluster
+    script:
+    - |
+      test "$MODE" = perf
+      if [[ "$SYSTEM_ID" == VR-* ]]; then
+        topology="$RUN_DIR/dp4-topology.json"
+        config="$RUN_DIR/client.yaml"
+        client_python=python3
+      else
+        topology="$SFLOW_WORKFLOW_OUTPUT_DIR/serve_endpoint/dp4-topology.json"
+        config="$CLIENT_CONFIG"
+        client_python=/opt/venv/bin/python
+      fi
+      exec "$client_python" "$QWEN_SHARED_DIR/colocated-client.py" \
+        --topology "$topology" --client-config "$config" -- \
+        bash "$CLIENT_LAUNCHER"

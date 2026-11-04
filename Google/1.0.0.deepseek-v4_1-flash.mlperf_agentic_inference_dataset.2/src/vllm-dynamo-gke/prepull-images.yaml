@@ -1,0 +1,61 @@
+# Pre-pull the DeepSeek-V4.1-Flash run images onto every <nodepool> node.
+#
+# The server image (centml-rubin-vllm with Dynamo pre-bundled) is tens of GB.
+# A cold pull during a run counts against sflow's reservation timeout and the
+# workers' readiness probes; pulling first makes it a one-time cost and a
+# scheduling rehearsal (wrong arch / unreachable registry / missing pull secret /
+# no disk surfaces here as ImagePullBackOff, not inside a reservation).
+#
+#   kubectl apply -f prepull-images.yaml
+#   kubectl rollout status ds/prepull-dsv41-flash-images --timeout=45m
+#   kubectl delete -f prepull-images.yaml     # cached layers stay on the node
+#
+# Keep in sync with VLLM_IMAGE / CLIENT_IMAGE / IMAGE_PULL_SECRET in the point
+# recipes (generate_point_recipes.py --check enforces it).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: prepull-dsv41-flash-images
+  namespace: default
+  labels:
+    app: prepull-dsv41-flash-images
+spec:
+  selector:
+    matchLabels:
+      app: prepull-dsv41-flash-images
+  template:
+    metadata:
+      labels:
+        app: prepull-dsv41-flash-images
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      imagePullSecrets:
+        - name: nv-gitlab-pull
+      tolerations:
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      # Sequential: one multi-GB pull at a time per node.
+      initContainers:
+        # VLLM_IMAGE = slurm_env.yaml VLLM_CONTAINER_IMAGE (linux/arm64,
+        # pre-bundles vLLM + Dynamo).
+        - name: pull-server
+          image: registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/centml-rubin-vllm@sha256:141b04dc8fb0461f9875bd116cf831aa5876b655ff210465e4bca8e21f004dcb
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "echo PULLED server on $(uname -m); python3 -c 'import dynamo, vllm; print(\"dynamo+vllm import OK\")' || true"]
+          resources:
+            requests: {cpu: 10m, memory: 256Mi}
+      containers:
+        # CLIENT_IMAGE = slurm_env.yaml ENDPOINT_CONTAINER_IMAGE (multi-arch).
+        - name: pull-client
+          image: ghcr.io/mlcommons/endpoints:4235a9c
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "echo PREPULL COMPLETE on $(uname -m); sleep infinity"]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      terminationGracePeriodSeconds: 0

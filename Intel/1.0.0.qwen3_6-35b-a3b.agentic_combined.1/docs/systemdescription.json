@@ -1,0 +1,114 @@
+{
+  "availability_url": "https://www.intel.com/content/www/us/en/products/sku/240777/intel-xeon-6980p-processor-504m-cache-2-00-ghz/specifications.html",
+  "batch": null,
+  "config_summary": null,
+  "config_summary_notes": "Three CPU replicas use TP=2. Standard parallelism fields are null because the checker validates them as accelerator counts; CPU topology is recorded separately.",
+  "data_parallel": null,
+  "dataset_id": null,
+  "dataset_link": null,
+  "dataset_name": null,
+  "dataset_type": null,
+  "disaggregated": null,
+  "division": "Standardized",
+  "endpoint_url": null,
+  "expert_parallel": null,
+  "input_token_average": null,
+  "link_config": null,
+  "link_to_model": "https://huggingface.co/Qwen/Qwen3.6-35B-A3B/tree/995ad96eacd98c81ed38be0c5b274b04031597b0",
+  "link_to_model_transformation": "calibration.adoc",
+  "max_supported_concurrency": 256,
+  "measured_accuracy_score": null,
+  "model_notes": "INT8 W8A8 weights with calibrated FP8 KV cache; MTP disabled.",
+  "model_precision": "INT8",
+  "node_config": null,
+  "node_types": [
+    {
+      "accelerator_info": [],
+      "container_link": null,
+      "cooling": null,
+      "driver": "Not applicable (CPU inference; no accelerator driver required)",
+      "filesystem": "ext4 vfat",
+      "host_memory_capacity": "2.4T",
+      "host_memory_configuration": "24 x 96GB DDR5-8800",
+      "host_network_card_count": "1x Ethernet",
+      "host_networking": "Ethernet",
+      "host_processor_core_count": 256,
+      "host_processor_model_name": "Intel(R) Xeon(R) 6980P",
+      "host_processor_vcpu_count": 256,
+      "host_processors_per_node": 2,
+      "host_storage_capacity": "5.3 TB NVMe SSD",
+      "host_storage_type": "NVMe SSD",
+      "hw_notes": null,
+      "inference_backend": "vLLM cpu",
+      "number_of_nodes": 1,
+      "operating_system": "ubuntu 26.04",
+      "other_hardware": null,
+      "other_software_stack": "vLLM 0.30.1rc1.dev57+g67ddac3ea [sha256:320822eb5201c388cccb926f76caa94f81ea20fba5579773a0637dc721ee33f6]: Python 3.12.14; PyTorch 2.13.0+cpu; container OS Ubuntu 25.04; transformers 5.17.0; vLLM 0.31.1rc1.dev366+g7a0d68f29 [sha256:d45df48f5e737142f62e77d4960a79605af03a32afbec63c4959b2f9d2e9f46d]: Python 3.12.15; PyTorch 2.13.0+cpu; container OS Ubuntu 22.04.5 LTS; transformers 5.19.0; vLLM 0.32.0rc1.dev8+g7a0d68f29.d20261018 [sha256:7b1435a0fb63969b12a6509c721e51c8ed1ad767655434fb95c166cd8672f422]: Python 3.12.15; PyTorch 2.13.0+cpu; container OS Ubuntu 22.04.5 LTS; transformers 5.19.0",
+      "sw_notes": null,
+      "system_node_ensemble_id": 0
+    }
+  ],
+  "output_token_average": null,
+  "parallelism_by_concurrency": {
+    "r12": {
+      "REPLICA_COUNT": "3",
+      "RUNTIME_DEVICE": "cpu",
+      "TOPOLOGY_MODE": "replica",
+      "TP_SIZE": "2"
+    },
+    "r128": {
+      "REPLICA_COUNT": "3",
+      "RUNTIME_DEVICE": "cpu",
+      "TOPOLOGY_MODE": "replica",
+      "TP_SIZE": "2"
+    },
+    "r16": {
+      "REPLICA_COUNT": "3",
+      "RUNTIME_DEVICE": "cpu",
+      "TOPOLOGY_MODE": "replica",
+      "TP_SIZE": "2"
+    },
+    "r256": {
+      "REPLICA_COUNT": "3",
+      "RUNTIME_DEVICE": "cpu",
+      "TOPOLOGY_MODE": "replica",
+      "TP_SIZE": "2"
+    },
+    "r32": {
+      "REPLICA_COUNT": "3",
+      "RUNTIME_DEVICE": "cpu",
+      "TOPOLOGY_MODE": "replica",
+      "TP_SIZE": "2"
+    },
+    "r64": {
+      "REPLICA_COUNT": "3",
+      "RUNTIME_DEVICE": "cpu",
+      "TOPOLOGY_MODE": "replica",
+      "TP_SIZE": "2"
+    },
+    "r8": {
+      "REPLICA_COUNT": "3",
+      "RUNTIME_DEVICE": "cpu",
+      "TOPOLOGY_MODE": "replica",
+      "TP_SIZE": "2"
+    }
+  },
+  "pipeline_parallel": null,
+  "publication_status": "Available",
+  "publish_date": null,
+  "serving_framework": "vLLM 0.30.1rc1.dev57+g67ddac3ea; vLLM 0.31.1rc1.dev366+g7a0d68f29; vLLM 0.32.0rc1.dev8+g7a0d68f29.d20261018",
+  "shortened_system_name": "1-node-2S-GNR_128C",
+  "submission_date": null,
+  "submission_id": "d529d8b2-f21b-41e0-b48f-d1de27746c5b",
+  "submitter_contact": "tianmu.li@intel.com",
+  "submitter_org_names": "Intel",
+  "system_availability_status": "Available",
+  "system_category": null,
+  "system_name": "1-node-2S-GNR_128C",
+  "system_node_ensemble_count": 1,
+  "system_node_ensemble_total": 1,
+  "system_size": "1x2S-GNR-AP",
+  "target_availability_date": null,
+  "tensor_parallel": null,
+  "tps_utilization": null
+}

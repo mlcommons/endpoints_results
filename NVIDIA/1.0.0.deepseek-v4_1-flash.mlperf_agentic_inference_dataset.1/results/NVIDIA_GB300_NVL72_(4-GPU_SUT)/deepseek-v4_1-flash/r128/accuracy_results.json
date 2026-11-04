@@ -1,0 +1,35 @@
+{
+  "average_accuracy": 0.975,
+  "accuracy_scores": [
+    {
+      "dataset_name": "swe_bench",
+      "extractor": null,
+      "ground_truth_column": null,
+      "score": 0.975,
+      "unit_samples": 200,
+      "num_repeats": 1,
+      "total_samples": 200,
+      "duration_s": 0.0,
+      "complete": true,
+      "dataset_type": "accuracy",
+      "response_counts": {
+        "issued": 0,
+        "scored": 0,
+        "empty": 0,
+        "missing": 0
+      }
+    },
+    {
+      "dataset_name": "performance",
+      "extractor": null,
+      "ground_truth_column": null,
+      "score": 0.5322,
+      "unit_samples": 20403,
+      "num_repeats": 1,
+      "total_samples": 40806,
+      "duration_s": 2851.501,
+      "complete": true,
+      "dataset_type": "performance"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "system_desc_id": "GB300-NVL72_GB300-288GB_aarch64x4_vLLM-Dynamo",
+  "cooling": "liquid",
+  "node_sets": [
+    {
+      "node_set_id": 0,
+      "system_node_ensemble_id": 0,
+      "nodes_provisioned": 1,
+      "power_method": "component_sum",
+      "components": {
+        "cpu": {
+          "model": "NVIDIA Grace 72-core (Arm Neoverse V2)",
+          "count_per_node": 2
+        },
+        "accelerator": {
+          "model": "NVIDIA GB300",
+          "count_per_node": 4
+        },
+        "scale_up_network": {
+          "method": "bandwidth_estimate",
+          "aggregate_bandwidth_tbps": 7.2,
+          "energy_per_bit_pj": {
+            "value_pj": 5,
+            "source_type": "mlc_default",
+            "source": "D.1"
+          }
+        }
+      }
+    }
+  ],
+  "scale_out": {
+    "present": false
+  },
+  "notes": "MLC Estimated Power: CPU and accelerator TDPs use the Appendix D defaults (D.2 Grace 300 W, D.3 GB300 1,400 W). Scale-up network: NVLink 5, 1.8 TB/s per GPU (7.2 TB/s per node), at Appendix D.1's default 5 pJ/bit. Scale-out network is not declared (scale_out.present: false; benchmark KV transfers use NVLink 5 within the NVL72 domain)."
+}

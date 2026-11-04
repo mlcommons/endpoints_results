@@ -1,0 +1,3 @@
+PATH: /opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TIKTOKEN_RS_CACHE_DIR: /tmp/hf_cache/tiktoken_rs
+HF_HOME: /tmp/hf_cache

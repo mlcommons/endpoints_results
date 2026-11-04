@@ -1,0 +1,199 @@
+# Point concurrency, Slurm resources, and task ordering.
+version: '0.1'
+variables:
+  CONCURRENCY:
+    value: 32
+    type: integer
+  QWEN_SHARED_DIR:
+    value: ${{ variables.REPO_ROOT }}/NVIDIA/src/qwen3.6-35b-a3b/configs/_shared
+    description: Common Dynamo and SWE runtime helpers.
+  POINT_DIR:
+    value: ${{ variables.REPO_ROOT }}/NVIDIA/src/qwen3.6-35b-a3b/configs/GB300-NVL72_GB300-288GB_aarch64x4_vLLM-Dynamo/point_32
+    description: This point folder; run.sh sets its absolute path.
+  SWE_SERVICE_PYTHON:
+    value: python3
+    description: Python environment with the pinned Endpoints SWE service already installed.
+  MODE:
+    value: both
+    description: Performance replay followed by 200 SWE-bench instances; perf or acc can be selected explicitly.
+  STORAGE_ROOT:
+    value: ${{ variables.SHARED_ROOT }}
+    description: Container bind root containing checkout, model, dataset and run directories.
+  SHARED_ROOT:
+    value: <shared-run-storage-root>
+    description: Writable shared root containing caches and run outputs; set --workspace-dir/--output-dir
+      below this root.
+  REPO_ROOT:
+    value: <absolute-repository-root>
+    description: Checkout on storage visible from the allocated node; set here once or override with --set
+      REPO_ROOT=/absolute/path.
+  SYSTEM_ID:
+    value: GB300-NVL72_GB300-288GB_aarch64x4_vLLM-Dynamo
+    description: Simple label for this hardware/configuration, set here once or override with --set SYSTEM_ID=...
+      .
+  MODEL_PATH:
+    value: ${{ variables.SHARED_ROOT }}/models/Qwen3.6-35B-A3B
+    description: Local BF16 source model matching dependencies.json.
+  DATASET_PATH:
+    value: ${{ variables.SHARED_ROOT }}/datasets/mlperf_agentic_inference_dataset.jsonl
+    description: Local full Agentic Inference JSONL dataset matching dependencies.json.
+  SERVER_IMAGE:
+    value: ${{ variables.GB300_SERVER_IMAGE }}
+    description: Immutable ARM64 registry source; Pyxis imports/caches it through Enroot.
+  GPU_UUID:
+    value: ''
+    description: DP1 GPU selection; automatically use the first visible GPU unless overridden.
+  CPUSET:
+    value: ''
+    description: Automatically use CPUs allowed by the allocation unless overridden.
+  STEP_CPUS:
+    type: integer
+    value: 144
+  PORT:
+    type: integer
+    value: 30003
+  HF_CACHE_DIR:
+    value: ${{ variables.STORAGE_ROOT }}/hf-cache
+  SLURM_ACCOUNT:
+    value: <slurm-account>
+  SLURM_PARTITION:
+    value: <partition>
+  SLURM_TIME:
+    value: 05:00:00
+  MAX_NUM_BATCHED_TOKENS:
+    value: 32768
+    type: integer
+  CLIENT_SLURM_PARTITION:
+    value: ${{ variables.SLURM_PARTITION }}
+  CLIENT_CPUS:
+    value: 69
+    type: integer
+  CLIENT_JOB_NAME:
+    value: qwen-${{ variables.RUN_LABEL }}-client
+  GPU_INDEX:
+    value: 0
+    type: integer
+  LOCAL_SCRATCH_ROOT:
+    value: /tmp/qwen
+    description: Owned node-local scratch root; CI supplies its approved site path.
+  LOCAL_SCRATCH:
+    value: ''
+  RUN_LABEL:
+    value: manual
+    description: Unique output label; run.sh supplies a timestamp by default.
+  DP:
+    value: 4
+    type: integer
+artifacts:
+  SWE_CONNECTION:
+    uri: <workdir>
+    content: '{}'
+  SWE_LAUNCHER:
+    uri: <workdir> variables.QWEN_SHARED_DIR }}/swe-service.py
+  DYNAMO_LAUNCHER:
+    uri: <workdir> variables.QWEN_SHARED_DIR }}/dynamo-server.py
+backends:
+  cluster:
+    account: ${{ variables.SLURM_ACCOUNT }}
+    default: true
+    extra_args:
+    - --exclusive
+    - --cpus-per-task=${{ variables.STEP_CPUS }}
+    gpus_per_node: 4
+    nodes: 1
+    partition: ${{ variables.SLURM_PARTITION }}
+    time: ${{ variables.SLURM_TIME }}
+    type: slurm
+  client_cpu:
+    type: slurm
+    account: ${{ variables.SLURM_ACCOUNT }}
+    partition: ${{ variables.CLIENT_SLURM_PARTITION }}
+    time: ${{ variables.SLURM_TIME }}
+    nodes: 1
+    gpus_per_node: 0
+    extra_args:
+    - --exclusive
+    - --cpus-per-task=${{ variables.CLIENT_CPUS }}
+    - --job-name=${{ variables.CLIENT_JOB_NAME }}
+    - --chdir=${{ variables.SHARED_ROOT }}
+operators:
+  client:
+    container_image: ${{ variables.CLIENT_IMAGE.rsplit(':', 1)[0].replace('docker://', '') }}@${{ variables.CLIENT_IMAGE_DIGEST
+      }}
+    container_mount_home: false
+    container_mounts:
+    - ${{ variables.STORAGE_ROOT }}:${{ variables.STORAGE_ROOT }}
+    container_remap_root: true
+    cpus_per_task: ${{ variables.CLIENT_CPUS }}
+    extra_args:
+    - --cpu-bind=none
+    - --no-container-entrypoint
+    - --chdir=${{ variables.SHARED_ROOT }}
+    nodes: 1
+    ntasks: 1
+    overlap: true
+    type: srun
+  server:
+    container_image: ${{ variables.SERVER_IMAGE.replace('docker://', '') }}
+    container_mount_home: false
+    container_mounts:
+    - ${{ variables.STORAGE_ROOT }}:${{ variables.STORAGE_ROOT }}
+    container_remap_root: true
+    cpus_per_task: ${{ variables.STEP_CPUS }}
+    extra_args:
+    - --cpu-bind=none
+    - --no-container-entrypoint
+    - --chdir=${{ variables.SHARED_ROOT }}
+    nodes: 1
+    ntasks: 1
+    overlap: true
+    type: srun
+    container_writable: true
+  client_host:
+    type: srun
+    nodes: 1
+    ntasks: 1
+    cpus_per_task: ${{ variables.CLIENT_CPUS }}
+    overlap: true
+    extra_args:
+    - --cpu-bind=none
+    - --chdir=${{ variables.SHARED_ROOT }}
+workflow:
+  name: GB300-NVL72_GB300-288GB_aarch64x4_vLLM-Dynamo-c32
+  tasks:
+  - name: swe_service
+    operator: client_host
+    script:
+    - exec bash "$QWEN_SHARED_DIR/swe-service.sh"
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: SWE_READY
+        timeout: 1800
+    backend: client_cpu
+  - name: serve_endpoint
+    operator: server
+    probes:
+      failure:
+        log_watch:
+          regex_pattern: re:(CUDA out of memory|Engine core initialization failed)
+      readiness:
+        log_watch:
+          regex_pattern: DYNAMO_DP4_READY
+        timeout: 5400
+    script:
+    - exec bash "$POINT_DIR/server.sh"
+    backend: cluster
+  - depends_on:
+    - serve_endpoint
+    - swe_service
+    name: benchmark_0
+    operator: client
+    probes:
+      failure:
+        log_watch:
+          regex_pattern: re:(?i)(Failed to compute chat-template baseline|token metric recorder failed|tokenizer
+            drain (?:timed out|failed))
+    script:
+    - exec bash "$POINT_DIR/client.sh"
+    backend: client_cpu

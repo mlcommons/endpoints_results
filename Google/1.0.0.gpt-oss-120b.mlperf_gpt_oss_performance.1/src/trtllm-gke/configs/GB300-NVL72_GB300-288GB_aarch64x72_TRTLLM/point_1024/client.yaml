@@ -1,0 +1,66 @@
+name: gpt-oss-120b-c1024
+version: '1.0'
+type: submission
+benchmark_mode: online
+submission_ref:
+  model: gpt-oss-120b
+  ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+model_params:
+  name: ${MODEL_PATH}
+  temperature: 1.0
+  top_p: 1.0
+  top_k: 0
+  max_new_tokens: 10240
+  streaming: 'on'
+datasets:
+- name: perf
+  type: performance
+  generation_config_override:
+    max_new_tokens: 10240
+  path: ${DATA_PATH}/v4/perf/perf_eval_ref.parquet
+  parser:
+    input_tokens: input_tokens
+- name: aime25::gptoss
+  type: accuracy
+  generation_config_override:
+    max_new_tokens: 32768
+  accuracy_config:
+    eval_method: pass_at_1
+    ground_truth: answer
+    extractor: boxed_math_extractor
+    num_repeats: 8
+- name: gpqa::gptoss
+  type: accuracy
+  generation_config_override:
+    max_new_tokens: 32768
+  accuracy_config:
+    eval_method: pass_at_1
+    ground_truth: ground_truth
+    extractor: abcd_extractor
+    num_repeats: 5
+- name: livecodebench::gptoss
+  type: accuracy
+  generation_config_override:
+    max_new_tokens: 32768
+  accuracy_config:
+    eval_method: code_bench_scorer
+    extractor: python_code_extractor
+    num_repeats: 3
+settings:
+  runtime:
+    max_issue_duration_ms: 7200000
+    n_samples_to_issue: 204672
+  timeouts:
+    run_timeout_s: 9000.0
+  load_pattern:
+    type: concurrency
+    target_concurrency: 1024
+  client:
+    num_workers: 16
+    worker_initialization_timeout: 300.0
+    log_level: WARN
+    worker_gc_mode: disabled
+endpoint_config:
+  endpoints: []
+  api_type: openai_completions
+report_dir: ${SFLOW_TASK_OUTPUT_DIR}

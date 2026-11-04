@@ -1,0 +1,177 @@
+version: '0.1'
+variables: null
+artifacts:
+- name: CTX_URLS
+  uri: <workdir>
+  content: ''
+- name: GEN_URLS
+  uri: <workdir>
+  content: ''
+- name: FRONTEND_URLS
+  uri: <workdir>
+  content: ''
+workflow:
+  name: trtllm_disagg_gptoss_perf_acc
+  tasks:
+  - name: snapshot_configs
+    resources:
+      nodes:
+        count: 1
+    operator:
+      name: host_bash
+    script:
+    - set -euo pipefail
+    - cp "${TRTLLM_YAML_CTX}" "${SFLOW_TASK_OUTPUT_DIR}/server-ctx.yaml"
+    - cp "${TRTLLM_ENV_YAML_CTX}" "${SFLOW_TASK_OUTPUT_DIR}/server-ctx-env.yaml"
+    - cp "${TRTLLM_YAML_GEN}" "${SFLOW_TASK_OUTPUT_DIR}/server-gen.yaml"
+    - cp "${TRTLLM_ENV_YAML_GEN}" "${SFLOW_TASK_OUTPUT_DIR}/server-gen-env.yaml"
+    - cp "${ENDPOINT_CONFIG}" "${SFLOW_TASK_OUTPUT_DIR}/client.yaml"
+    - cp "${ENDPOINT_ENV_YAML}" "${SFLOW_TASK_OUTPUT_DIR}/endpoint-env.yaml"
+    - if [ -n "${SITE_ENV_YAML:-}" ]; then cp "${SITE_ENV_YAML}" "${SFLOW_TASK_OUTPUT_DIR}/site-env.yaml"; fi
+  - name: prefill_server
+    replicas:
+      count: ${{ variables.NUM_CTX_SERVERS }}
+      policy: parallel
+    resources:
+      gpus:
+        count: ${{ variables.GPUS_PER_CTX_RANK }}
+    operator:
+      name: trtllm_disagg_container
+      ntasks: ${{ variables.GPUS_PER_CTX_RANK }}
+      ntasks_per_node: ${{ [variables.GPUS_PER_CTX_RANK, variables.GPUS_PER_NODE] | min }}
+    script:
+    - set -euo pipefail
+    - export PYTHONNOUSERSITE=1
+    - export HF_MODULES_CACHE=/tmp/trtllm-hf-modules-${SLURM_JOB_ID}-${SLURM_STEP_ID:-0}-${SLURM_PROCID:-0}
+    - mkdir -p "${HF_MODULES_CACHE}"
+    - if [ "${SLURM_PROCID:-0}" = "0" ]; then echo "$(echo ${SFLOW_TASK_ASSIGNED_NODE_IPS} | cut -d',' -f1):$(( ${{ variables.BASE_PORT
+      }} + ${SFLOW_REPLICA_INDEX} ))" >> ${{ artifacts.CTX_URLS.path }}; fi
+    - ENV_EXPORTS=$(python3 ${{ variables.WORK_DIR }}/NVIDIA/src/sflow/tools/run_with_env.py ${{ variables.TRTLLM_ENV_YAML_CTX
+      }} ${{ variables.SITE_ENV_YAML }} | tee /dev/stderr)
+    - eval "${ENV_EXPORTS}"
+    - TRTLLM_LAUNCH_ENV=(env)
+    - while IFS= read -r item; do TRTLLM_LAUNCH_ENV+=("${item}"); done < <(env | grep '^UCX_')
+    - 'trtllm-llmapi-launch "${TRTLLM_LAUNCH_ENV[@]}" trtllm-serve ${{ variables.MODEL_PATH }} --host 0.0.0.0 --port $(( ${{
+      variables.BASE_PORT }} + ${SFLOW_REPLICA_INDEX} )) --extra_llm_api_options ${{ variables.TRTLLM_YAML_CTX }} 2>&1 | tee
+      ${SFLOW_TASK_OUTPUT_DIR}/prefill_rank${SLURM_PROCID}.log
+
+      '
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: Application startup complete
+        timeout: 1800
+        interval: 10
+  - name: decode_server
+    replicas:
+      count: ${{ variables.NUM_GEN_SERVERS }}
+      policy: parallel
+    resources:
+      gpus:
+        count: ${{ variables.GPUS_PER_GEN_RANK }}
+    operator:
+      name: trtllm_disagg_container
+      ntasks: ${{ variables.GPUS_PER_GEN_RANK }}
+      ntasks_per_node: ${{ [variables.GPUS_PER_GEN_RANK, variables.GPUS_PER_NODE] | min }}
+    script:
+    - set -euo pipefail
+    - export PYTHONNOUSERSITE=1
+    - export HF_MODULES_CACHE=/tmp/trtllm-hf-modules-${SLURM_JOB_ID}-${SLURM_STEP_ID:-0}-${SLURM_PROCID:-0}
+    - mkdir -p "${HF_MODULES_CACHE}"
+    - if [ "${SLURM_PROCID:-0}" = "0" ]; then echo "$(echo ${SFLOW_TASK_ASSIGNED_NODE_IPS} | cut -d',' -f1):$(( ${{ variables.BASE_PORT
+      }} + ${{ variables.NUM_CTX_SERVERS }} + ${SFLOW_REPLICA_INDEX} ))" >> ${{ artifacts.GEN_URLS.path }}; fi
+    - ENV_EXPORTS=$(python3 ${{ variables.WORK_DIR }}/NVIDIA/src/sflow/tools/run_with_env.py ${{ variables.TRTLLM_ENV_YAML_GEN
+      }} ${{ variables.SITE_ENV_YAML }} | tee /dev/stderr)
+    - eval "${ENV_EXPORTS}"
+    - TRTLLM_LAUNCH_ENV=(env)
+    - while IFS= read -r item; do TRTLLM_LAUNCH_ENV+=("${item}"); done < <(env | grep '^UCX_')
+    - 'trtllm-llmapi-launch "${TRTLLM_LAUNCH_ENV[@]}" trtllm-serve ${{ variables.MODEL_PATH }} --host 0.0.0.0 --port $(( ${{
+      variables.BASE_PORT }} + ${{ variables.NUM_CTX_SERVERS }} + ${SFLOW_REPLICA_INDEX} )) --extra_llm_api_options ${{ variables.TRTLLM_YAML_GEN
+      }} 2>&1 | tee ${SFLOW_TASK_OUTPUT_DIR}/decode_rank${SLURM_PROCID}.log
+
+      '
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: Application startup complete
+        timeout: 1800
+        interval: 10
+  - name: frontend_server
+    replicas:
+      count: ${{ variables.NUM_FRONTEND_SERVERS }}
+      policy: parallel
+    resources:
+      nodes:
+        count: 1
+    operator:
+      name: trtllm_disagg_container
+      ntasks: 1
+      ntasks_per_node: 1
+    script:
+    - set -euo pipefail
+    - export PYTHONNOUSERSITE=1
+    - FRONTEND_MY_PORT=$(( ${{ variables.FRONTEND_PORT }} + ${SFLOW_REPLICA_INDEX} ))
+    - MY_IP=$(echo ${SFLOW_TASK_ASSIGNED_NODE_IPS} | cut -d',' -f1)
+    - MY_CONFIG=${SFLOW_TASK_OUTPUT_DIR}/server_config_${SFLOW_REPLICA_INDEX}.yaml
+    - CTX_URLS_LIST=$(grep -v '^[[:space:]]*$' ${{ artifacts.CTX_URLS.path }} | paste -sd ',')
+    - GEN_URLS_LIST=$(grep -v '^[[:space:]]*$' ${{ artifacts.GEN_URLS.path }} | paste -sd ',')
+    - 'python3 ${{ variables.WORK_DIR }}/NVIDIA/src/sflow/tools/generate_master_yaml.py --hostname "${MY_IP}" --port "${FRONTEND_MY_PORT}"
+      --ctx-urls "${CTX_URLS_LIST}" --gen-urls "${GEN_URLS_LIST}" --output "${MY_CONFIG}" --register-url-to ${{ artifacts.FRONTEND_URLS.path
+      }}
+
+      '
+    - trtllm-serve disaggregated -c "${MY_CONFIG}" --request_timeout 7200 --server_start_timeout 7200
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: Application startup complete
+        timeout: 300
+        interval: 10
+    depends_on:
+    - prefill_server
+    - decode_server
+  - name: lcb_service
+    operator:
+      name: lcb_container
+      ntasks: 1
+      ntasks_per_node: 1
+    resources:
+      nodes:
+        count: 1
+    script:
+    - set -euo pipefail
+    - echo "lcb_service starting on port 13835 (localhost)"
+    - cd /app
+    - /app/venv/bin/uvicorn server:app --host 0.0.0.0 --port 13835 --timeout-keep-alive 7200 --ws-ping-interval 30 --ws-ping-timeout
+      10
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: Uvicorn running
+        timeout: 600
+        interval: 5
+  - name: endpoint_benchmark
+    operator:
+      name: endpoint_container
+      ntasks: 1
+      ntasks_per_node: 1
+    resources:
+      nodes:
+        count: 1
+    script:
+    - set -euo pipefail
+    - export PYTHONNOUSERSITE=1
+    - FRONTEND_URLS_LIST=$(grep -v '^[[:space:]]*$' ${{ artifacts.FRONTEND_URLS.path }} | paste -sd ',')
+    - echo "FRONTEND_URLS_LIST=${FRONTEND_URLS_LIST}"
+    - RESOLVED_ENDPOINT_YAML=${SFLOW_TASK_OUTPUT_DIR}/endpoint_resolved.yaml
+    - '/opt/venv/bin/python3 ${{ variables.WORK_DIR }}/NVIDIA/src/sflow/tools/generate_endpoint_yaml.py --input ${{ variables.ENDPOINT_CONFIG
+      }} --frontend-urls "${FRONTEND_URLS_LIST}" --output "${RESOLVED_ENDPOINT_YAML}"
+
+      '
+    - ENV_EXPORTS=$(/opt/venv/bin/python3 ${{ variables.WORK_DIR }}/NVIDIA/src/sflow/tools/run_with_env.py ${{ variables.ENDPOINT_ENV_YAML
+      }} | tee /dev/stderr)
+    - eval "${ENV_EXPORTS}"
+    - /opt/venv/bin/inference-endpoint benchmark from-config -c "${RESOLVED_ENDPOINT_YAML}" --mode "${{ variables.MODE }}"
+    depends_on:
+    - frontend_server
+    - lcb_service

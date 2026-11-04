@@ -1,0 +1,84 @@
+name: kimi-k3-dynamo-final
+version: '1.0'
+type: online
+submission_ref:
+  model: kimi-k3
+  ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+model_params:
+  name: /models/kimi-k3
+  temperature: 1.0
+  top_p: 1.0
+  max_new_tokens: 8192
+  min_new_tokens: 1
+  skip_special_tokens: true
+  streaming: 'on'
+  tokenizer_name: /models/kimi-k3
+datasets:
+- name: agentic_combined
+  type: performance
+  path: /data/agentic_combined_v6.jsonl
+  accuracy_config:
+    eval_method: agentic_inference_inline
+    num_repeats: 1
+  agentic_inference:
+    turn_timeout_s: 86400.0
+    enable_salt: true
+    inject_tool_delay: true
+    routing_headers:
+    - X-Session-ID
+    num_trajectories_to_issue: 4904
+    stop_issuing_on_first_user_complete: false
+settings:
+  runtime:
+    scheduler_random_seed: 10487924139932647040
+    dataloader_random_seed: 586478644936801402
+  load_pattern:
+    type: agentic_inference
+    target_concurrency: 512
+  client:
+    num_workers: 4
+    log_level: INFO
+    warmup_connections: 0
+    auto_warmup_budget_fraction: 0.25
+    max_concurrent_warmup_connects: 128
+    max_connections: -1
+    transport:
+      type: zmq
+      recv_buffer_size: 16777216
+      send_buffer_size: 16777216
+      io_threads: 4
+      worker_io_threads: 1
+      high_water_mark: 0
+      linger: -1
+      immediate: 1
+    stream_all_chunks: false
+    worker_initialization_timeout: 600.0
+    worker_graceful_shutdown_wait: 0.5
+    worker_force_kill_timeout: 0.5
+    insecure: false
+    max_idle_time: 0.5
+    min_required_connections: -1
+    worker_gc_mode: relaxed
+  timeouts:
+    interrupted_teardown_grace_s: 30.0
+    service_ready_timeout_s: 30.0
+    warmup_drain_timeout_s: 240.0
+  warmup:
+    enabled: false
+    salt: false
+    drain: false
+    warmup_random_seed: 586478644936801402
+  profiling: {}
+  early_stopping:
+    enabled: true
+  steady_state:
+    enabled: false
+  metrics_tokenizer_workers: 4
+  metrics_isl: false
+endpoint_config:
+  endpoints:
+  - http://127.0.0.1:8000
+  api_type: openai
+report_dir: /results/report
+verbose: false
+enable_cpu_affinity: true

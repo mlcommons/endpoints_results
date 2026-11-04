@@ -1,0 +1,5 @@
+*
+!lib/
+!lib/prepare_mlcflow.sh
+!configs/
+!configs/mlcflow.conf

@@ -1,0 +1,71 @@
+variables:
+  ENDPOINT_CONTAINER_IMAGE:
+    value: ghcr.io/mlcommons/endpoints:e9f427c
+  LCB_CONTAINER_IMAGE:
+    value: ghcr.io/mlcommons/endpoints:9d749906-livecodebench
+  WORK_DIR:
+    value: /path/to/partner-repository
+  SCRATCH_DIR:
+    value: /path/to/shared-assets
+  SITE_ENV_YAML:
+    value: ''
+  CONTAINER_MOUNTS:
+    value: ${{ variables.WORK_DIR }}:${{ variables.WORK_DIR }},${{ variables.SCRATCH_DIR }}:${{ variables.SCRATCH_DIR }}
+  SLURM_ACCOUNT:
+    value: your_account
+  SLURM_PARTITION:
+    value: your_partition
+  SLURM_TIME:
+    value: 05:00:00
+  GPUS_PER_NODE:
+    type: integer
+    value: 4
+  SLURM_NODES:
+    type: integer
+    value: ${{ ((variables.TOTAL_GPUS / variables.GPUS_PER_NODE) | round(0, "ceil")) | int }}
+  SEGMENT:
+    type: integer
+    value: ${{ variables.SLURM_NODES }}
+operators:
+- name: host_bash
+  type: bash
+- name: trtllm_disagg_container
+  type: srun
+  container_image: ${{ variables.CONTAINER_IMAGE }}
+  container_writable: false
+  container_mount_home: true
+  container_remap_root: true
+  mpi: pmix
+  container_mounts:
+  - ${{ variables.CONTAINER_MOUNTS }}
+- name: endpoint_container
+  type: srun
+  container_image: ${{ variables.ENDPOINT_CONTAINER_IMAGE }}
+  container_writable: false
+  container_mount_home: false
+  container_remap_root: true
+  mpi: pmix
+  container_mounts:
+  - ${{ variables.CONTAINER_MOUNTS }}
+  - ${{ variables.DATA_PATH }}/endpoint_accuracy:<node-mount>/inference-endpoint/dataset_cache:ro
+- name: lcb_container
+  type: srun
+  container_image: ${{ variables.LCB_CONTAINER_IMAGE }}
+  container_writable: false
+  container_mount_home: false
+  container_remap_root: false
+  container_mounts:
+  - ${{ variables.CONTAINER_MOUNTS }}
+  container_workdir: /app
+backends:
+- name: slurm_cluster
+  type: slurm
+  default: true
+  account: ${{ variables.SLURM_ACCOUNT }}
+  partition: ${{ variables.SLURM_PARTITION }}
+  gpus_per_node: ${{ variables.GPUS_PER_NODE }}
+  time: ${{ variables.SLURM_TIME }}
+  nodes: ${{ variables.SLURM_NODES }}
+  extra_args:
+  - --segment=${{ variables.SEGMENT }}
+  - --exclusive

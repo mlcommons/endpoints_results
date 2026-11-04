@@ -1,0 +1,113 @@
+# Pre-pull the Kimi K3 v1.0.3 run images onto every node of the pool.
+#
+# v1.0.3 serves every point from NVIDIA's TensorRT-LLM + Dynamo image in the
+# PRIVATE partner registry, pinned by digest in the drop (enroot form
+# registry.gitlab.com#nvidia/.../kimi-k3-dynamo@sha256:985260a0..., tag
+# candidate-backlog-03bb2f90fc43-r1). The client is the public multi-arch
+# ghcr.io/mlcommons/endpoints@sha256:1523051b... (commit d3c57f2). Both images
+# differ from v1.0.2, so v1.0.2-warmed nodes still pull cold.
+#
+# Server image facts behind this file: entrypoint /opt/nvidia/nvidia_entrypoint.sh,
+# User root, files mode 700/600 (root only: never set runAsUser/runAsNonRoot on
+# it), and /bin/sh is a wrapper script, so pull-server execs /usr/bin/uname.
+#
+# IfNotPresent reuses a cached image only for the IDENTICAL reference string:
+# both references equal SERVER_IMAGE / CLIENT_IMAGE in generate_point_recipes.py.
+#
+# The kubelet needs a registry Secret for the server image. This creates it from
+# the partner netrc without the token reaching argv, shell history or a file,
+# pulls, then deletes the DaemonSet and the Secret (the EXIT trap also cleans up
+# on any failure). Run from this directory; strip the leading "#   " from each
+# line and paste into bash:
+#
+#   set -euo pipefail
+#   POOL="REPLACE-WITH-NODE-POOL"
+#   NETRC="${HOME}/.config/nv-partner/gitlab.netrc"
+#   SERVER_IMAGE=registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/kimi-k3-dynamo@sha256:985260a01a2dfb66bdd0c68f0bd482e78f69c1b101120c7341782d101e2602a4
+#   [[ "${POOL}" =~ ^[a-z]([-a-z0-9]{0,38}[a-z0-9])?$ ]] || { echo "set POOL" >&2; exit 1; }
+#   cleanup() {
+#     kubectl delete pod kimi-k3-pull-canary -n default --ignore-not-found --wait=false
+#     kubectl delete ds prepull-kimi-k3-v103-images -n default --ignore-not-found --wait=false
+#     kubectl delete secret nv-gitlab-pull -n default --ignore-not-found
+#   }
+#   trap cleanup EXIT
+#   python3 - "${NETRC}" <<'PY' | kubectl create secret docker-registry nv-gitlab-pull \
+#       -n default --from-file=.dockerconfigjson=/dev/stdin
+#   import base64, json, netrc, sys
+#   try:
+#       login, _, token = netrc.netrc(sys.argv[1]).authenticators("registry.gitlab.com")
+#   except Exception:
+#       sys.exit("no usable registry.gitlab.com entry in the netrc")
+#   if not login or not token:
+#       sys.exit("no usable registry.gitlab.com entry in the netrc")
+#   auth = base64.b64encode(f"{login}:{token}".encode()).decode()
+#   json.dump({"auths": {"registry.gitlab.com": {"auth": auth}}}, sys.stdout)
+#   PY
+#   test "$(kubectl get secret nv-gitlab-pull -n default -o jsonpath='{.type}')" = kubernetes.io/dockerconfigjson
+#   sed "s|^\( *cloud\.google\.com/gke-nodepool:\).*\$|\1 ${POOL}|" prepull-images.yaml | kubectl apply -f -
+#   kubectl rollout status ds/prepull-kimi-k3-v103-images -n default --timeout=90m
+#   kubectl logs -n default -l app=prepull-kimi-k3-v103-images -c pull-server --prefix --tail=1
+#   kubectl logs -n default -l app=prepull-kimi-k3-v103-images -c pull-client --prefix --tail=1
+#   kubectl delete ds prepull-kimi-k3-v103-images -n default
+#   kubectl delete secret nv-gitlab-pull -n default
+#   # Canary: a pod WITHOUT imagePullSecrets must start the cached server image.
+#   # If it sits in ErrImagePull, this kubelet re-checks pull credentials for
+#   # cached images (KubeletEnsureSecretPulledImages): keep a Secret and give the
+#   # recipe pods imagePullSecrets instead (with-pull-secret/ tree).
+#   kubectl run kimi-k3-pull-canary -n default --restart=Never --image="${SERVER_IMAGE}" \
+#     --image-pull-policy=IfNotPresent --command \
+#     --overrides='{"apiVersion":"v1","spec":{"automountServiceAccountToken":false,"nodeSelector":{"cloud.google.com/gke-nodepool":"'"${POOL}"'"},"tolerations":[{"operator":"Exists"}]}}' \
+#     -- /usr/bin/uname -m
+#   kubectl wait pod/kimi-k3-pull-canary -n default --for=jsonpath='{.status.phase}'=Succeeded --timeout=10m
+#   kubectl logs pod/kimi-k3-pull-canary -n default
+#
+# Deleting the DaemonSet does NOT evict the cached images; kubelet image GC does,
+# once the disk passes 85% used (stage-kimi-k3-assets.yaml keeps >= 15% free).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: prepull-kimi-k3-v103-images
+  namespace: default
+  labels:
+    app: prepull-kimi-k3-v103-images
+spec:
+  selector:
+    matchLabels:
+      app: prepull-kimi-k3-v103-images
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "100%"
+  template:
+    metadata:
+      labels:
+        app: prepull-kimi-k3-v103-images
+    spec:
+      # Match the recipe's backend node_selector exactly.
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      # registry.gitlab.com credentials, created and deleted by the header block.
+      # Without it only an already-cached server image starts.
+      imagePullSecrets:
+      - name: nv-gitlab-pull
+      automountServiceAccountToken: false
+      # Init containers run in order: the large server image first, then the
+      # client, so a node never runs two large pulls at once.
+      initContainers:
+      - name: pull-server
+        image: registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/kimi-k3-dynamo@sha256:985260a01a2dfb66bdd0c68f0bd482e78f69c1b101120c7341782d101e2602a4
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/bin/uname", "-m"]
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+      containers:
+      - name: pull-client
+        image: ghcr.io/mlcommons/endpoints@sha256:1523051b141437b25083924d6428082f435713516eee71c54ae207b393900b2d
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "echo PREPULL COMPLETE on $(uname -m); exec sleep infinity"]
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+      terminationGracePeriodSeconds: 0

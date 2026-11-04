@@ -1,0 +1,24 @@
+# kimi-swe-model: --extra_llm_api_options for the pilot endpoint only. Not a submission config.
+# GPT-OSS-120B on one GB300 GPU (TP1), long enough contexts for multi-turn SWE agents
+# (gpt-oss supports 131072 tokens). KV block reuse stays off, as in the GPT-OSS recipes.
+backend: pytorch
+tensor_parallel_size: 1
+pipeline_parallel_size: 1
+moe_expert_parallel_size: 1
+max_batch_size: 16
+max_num_tokens: 16384
+max_seq_len: 131072
+enable_chunked_prefill: true
+print_iter_log: false
+kv_cache_config:
+  dtype: fp8
+  free_gpu_memory_fraction: 0.85
+  enable_block_reuse: false
+moe_config:
+  backend: TRTLLM
+cuda_graph_config:
+  enable_padding: true
+  max_batch_size: 16
+# As in the GPT-OSS recipes' ctx and gen workers. pilot-1 ran the default TorchSampler and
+# its executor died ~6 min in with a CUDA device-side assert in the sampler.
+sampler_type: TRTLLMSampler

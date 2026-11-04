@@ -1,0 +1,90 @@
+# Create the durable report directory on every node of the A4X-max pool.
+#
+# WHY THIS EXISTS
+# ---------------
+# sflow gives each task an emptyDir at $SFLOW_WORKFLOW_OUTPUT_DIR and copies it
+# back to the driver via an EXIT-trap plus a sentinel printed to the pod log.
+# That channel has failed twice on this cluster, for two unrelated reasons, and
+# both times the benchmark itself was flawless and the results were still lost:
+#
+#   Kimi C24  -- `exec` in the task replaced the shell, destroying the EXIT
+#                trap. 39869/39869 samples completed; report/ died with the pod.
+#   Kimi C192 -- the client went silent for 2 h 05 m during its tokenization
+#                drain, `kubectl logs` stalled for 7,474 s, the sentinel could
+#                not be delivered at all, and the emptyDir was destroyed with
+#                the pod.
+#
+# The DSR1 recipes avoid the first by not using `exec` in the benchmark task,
+# and shorten the second by raising metrics_tokenizer_workers -- but a hostPath
+# on the node's local SSD depends on NONE of that machinery. The bytes are
+# simply still on the node afterwards and can be fetched whenever. The recipe
+# prints `DSR1_REPORT_DIR node=... path=...` early precisely so you can find
+# them without the pod.
+#
+# The directory must PRE-EXIST because sflow mounts fs:// with a strict
+# `Directory` volume type -- kubelet refuses the pod rather than silently
+# creating an empty dir. That strictness is correct (it is what stops a missing
+# model cache from becoming an empty mount); it just means the report directory
+# has to be created once, here.
+#
+# Cheap and idempotent: an empty dir on the same local SSD that already holds
+# the model cache.
+#
+#   kubectl apply -f mk-report-dir.yaml
+#   kubectl rollout status ds/dsr1-mk-report-dir --timeout=300s
+#   kubectl delete -f mk-report-dir.yaml      # the directory persists
+#
+# To collect afterwards:
+#   kubectl logs <benchmark pod> | grep DSR1_REPORT_DIR
+#   gcloud compute ssh <that node> -- \
+#     'sudo tar czf - -C <node-local-ssd>/dsr1-reports <run>' > run.tgz
+#
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dsr1-mk-report-dir
+spec:
+  selector:
+    matchLabels:
+      app: dsr1-mk-report-dir
+  template:
+    metadata:
+      labels:
+        app: dsr1-mk-report-dir
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: mkdir
+          # Multi-arch with a shell; the pool is arm64, so a single-arch amd64
+          # image would crash-loop with "exec format error".
+          image: <registry>/cloudsdktool/google-cloud-cli:stable
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              # Must match the REPORTS_DIR artifact in the point recipes.
+              D=/host-ssd/dsr1-reports
+              mkdir -p "$D"
+              chmod 1777 "$D"   # the benchmark pod runs as root, but keep it open
+              echo "ready: $(ls -ld "$D")"
+              sleep infinity
+          volumeMounts:
+            - name: host-ssd
+              mountPath: /host-ssd
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      volumes:
+        - name: host-ssd
+          hostPath:
+            path: <node-local-ssd>
+            type: Directory
+      terminationGracePeriodSeconds: 0

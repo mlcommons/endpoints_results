@@ -1,0 +1,313 @@
+version: '0.1'
+variables:
+  ALLOCATION_SETUP:
+    value: ["pin-clocks"]
+  ALLOCATION_CLEANUP:
+    value: ["restore-clocks"]
+  NUMA_BIND:
+    value: 1
+  SEGMENT_NODES:
+    value: 2
+  MEMORY_CLOCK_MHZ:
+    value: 4752
+  MEMORY_CLOCK_RESTORE:
+    value: "3186,4752"
+  CONCURRENCY:
+    value: 96
+  NUM_TRAJECTORIES:
+    value: 1226
+  NUM_CTX:
+    value: 1
+  NUM_GEN:
+    value: 3
+  GEN_GPUS:
+    value: 8
+  TOTAL_GPUS:
+    value: 32
+  TOTAL_NODES:
+    value: 8
+  CTX_GPUS:
+    value: 8
+  DRAFT_HEAD:
+    value: sglang
+  FRONTEND_NODE:
+    value: 2
+  CLIENT_NODE:
+    value: 2
+  DYNAMO_REQUEST_PLANE:
+    value: tcp
+  DYNAMO_DECODE_ENTRY:
+    value: /opt/k3-dynamo/helpers/dynamo_entry_v4.py
+  DYN_K3_NATIVE_TEXT_COMPAT:
+    value: 0
+  REFERENCE_SYSTEM:
+    value: VR-NVL72_VR-288GB_aarch64x48_TRTLLM-Dynamo
+  DYNAMO_DECODE_ROUTER_MODE:
+    value: least-loaded
+  DYNAMO_DECODE_EXTRA_ARGS:
+    value: ''
+artifacts:
+- name: CLIENT_CONFIG
+  uri: <workdir>
+  content: |
+    name: kimi-k3-c96
+    version: '1.0'
+    type: online
+    submission_ref:
+      model: kimi-k3
+      ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+    model_params:
+      name: /models/kimi-k3
+      tokenizer_name: /models/kimi-k3
+      temperature: 1.0
+      top_p: 1.0
+      max_new_tokens: 8192
+      streaming: 'on'
+    datasets:
+    - name: agentic_combined
+      type: performance
+      path: /data/agentic_combined_v6.jsonl
+      accuracy_config:
+        eval_method: agentic_inference_inline
+      agentic_inference:
+        enable_salt: true
+        inject_tool_delay: true
+        num_trajectories_to_issue: ${NUM_TRAJECTORIES}
+    settings:
+      load_pattern:
+        type: agentic_inference
+        target_concurrency: ${CONCURRENCY}
+      client:
+        num_workers: 4
+        warmup_connections: 0
+        max_idle_time: 0.5
+        worker_initialization_timeout: 600.0
+      metrics_isl: false
+    endpoint_config:
+      endpoints:
+      - http://127.0.0.1:8000
+      api_type: openai
+    report_dir: /results/report
+- name: PREFILL_CONFIG
+  uri: <workdir>
+  content: |
+    tensor_parallel_size: 8
+    moe_expert_parallel_size: 8
+    pipeline_parallel_size: 1
+    enable_attention_dp: false
+    trust_remote_code: true
+    max_batch_size: 16
+    max_num_tokens: 16384
+    max_seq_len: 262144
+    enable_chunked_prefill: true
+    disable_overlap_scheduler: true
+    cuda_graph_config: null
+    moe_config:
+      backend: CUTEDSL
+      max_num_tokens: 16384
+      use_low_precision_moe_combine: true
+    kv_cache_config:
+      dtype: fp8
+      tokens_per_block: 64
+      mamba_ssm_cache_dtype: bfloat16
+      use_kv_cache_manager_v2: true
+      enable_block_reuse: true
+      block_reuse_config:
+        policy: per_conversation
+        max_num_turns: 1
+      mamba_state_config:
+        enable_branch_snapshot: true
+        periodic_snapshot_interval: 0
+        additional_snapshot_offsets_from_end:
+        - 0
+      free_gpu_memory_fraction: 0.55
+      host_cache_size: 171798691840
+    cache_transceiver_config:
+      backend: NIXL
+      transceiver_runtime: PYTHON
+      max_tokens_in_buffer: 1048576
+      kv_transfer_timeout_ms: 600000
+    num_serve_frontends: 8
+    stream_interval: 10
+    return_perf_metrics: false
+    print_iter_log: false
+    enable_iter_perf_stats: true
+    enable_iter_req_stats: false
+    gpus_per_node: 4
+- name: DECODE_CONFIG
+  uri: <workdir>
+  content: |
+    tensor_parallel_size: 8
+    pipeline_parallel_size: 1
+    enable_attention_dp: false
+    trust_remote_code: true
+    moe_expert_parallel_size: 8
+    max_batch_size: 32
+    max_num_tokens: 192
+    max_seq_len: 262144
+    cuda_graph_config:
+      batch_sizes:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
+      - 17
+      - 18
+      - 19
+      - 20
+      - 21
+      - 22
+      - 23
+      - 24
+      - 25
+      - 26
+      - 27
+      - 28
+      - 29
+      - 30
+      - 31
+      - 32
+      enable_padding: true
+    speculative_config:
+      decoding_type: DSpark
+      speculative_model: /models/kimi-k3-dspark
+      max_draft_len: 5
+      block_size: 5
+    moe_config:
+      backend: CUTEDSL
+      use_low_precision_moe_combine: true
+    kv_cache_config:
+      dtype: fp8
+      tokens_per_block: 64
+      mamba_ssm_cache_dtype: bfloat16
+      use_kv_cache_manager_v2: true
+      enable_block_reuse: false
+      mamba_state_config:
+        periodic_snapshot_interval: 0
+        additional_snapshot_offsets_from_end:
+        - 0
+      free_gpu_memory_fraction: 0.85
+      host_cache_size: 137438953472
+      max_util_for_resume: 1.0
+    cache_transceiver_config:
+      backend: NIXL
+      transceiver_runtime: PYTHON
+      max_tokens_in_buffer: 1048576
+      kv_cache_bounce_size_mb: 0
+      kv_transfer_timeout_ms: 600000
+    num_postprocess_workers: 4
+    num_serve_frontends: 8
+    stream_interval: 100
+    return_perf_metrics: false
+    print_iter_log: false
+    enable_iter_perf_stats: false
+    enable_iter_req_stats: false
+    gpus_per_node: 4
+- name: PREFILL_ENV
+  uri: <workdir>
+  content: |
+    TRTLLM_SERVER_DISABLE_GC: '1'
+    TRTLLM_WORKER_DISABLE_GC: '1'
+    OMP_NUM_THREADS: '1'
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    KIMI_K3_ATTN_RES_TOPOLOGY: '1'
+    TRTLLM_KV_TRANSFER_NUM_THREADS: '8'
+    TRTLLM_SERVE_ENABLE_MSGSPEC: '1'
+    TLLM_K3_MLA_GEN_BACKEND: cute-dsl
+    KIMI_K3_FP8_WEIGHT_READ_MOE_MLP: '1'
+    KIMI_K3_MLA_MAX_POSITIONS: '262144'
+    K3_TOKENIZER_FASTPATH: '1'
+    TLLM_MOE_ASYNC_INPUT_QUANT: '0'
+    TLLM_ROUTING_DISABLE_COOP_LAUNCH: '1'
+    TLLM_AUTOTUNER_MULTIPROCESS: '0'
+    TLLM_FMHA_LIBS: -flashinfer_trtllm_gen
+    MIMALLOC_ARENA_RESERVE: '0'
+    CUDA_SCALE_LAUNCH_QUEUES: 4x
+    TLLM_V2_CTX_COST_KV_OFFSET: '114000'
+    TLLM_V2_CTX_COST_KV_DEPTH_THRESHOLD: '143000'
+    TRTLLM_KDA_MTP_COMPACT: '1'
+    TRTLLM_KDA_MTP_COMPACT_QUANTIZED: '1'
+    TRTLLM_KDA_MTP_COMPACT_TWO_CTAS: '1'
+- name: DECODE_ENV
+  uri: <workdir>
+  content: |
+    TRTLLM_SERVER_DISABLE_GC: '1'
+    TRTLLM_WORKER_DISABLE_GC: '1'
+    OMP_NUM_THREADS: '1'
+    PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    KIMI_K3_ATTN_RES_TOPOLOGY: '1'
+    TRTLLM_KV_TRANSFER_NUM_THREADS: '8'
+    TRTLLM_SERVE_ENABLE_MSGSPEC: '1'
+    TLLM_K3_MLA_GEN_BACKEND: cute-dsl
+    KIMI_K3_FP8_WEIGHT_READ_MOE_MLP: '1'
+    KIMI_K3_MLA_MAX_POSITIONS: '262144'
+    K3_TOKENIZER_FASTPATH: '1'
+    TRTLLM_MOE_A2A_FORCE_CFT: '0'
+    NCCL_GRAPH_MIXING_SUPPORT: '0'
+    TRTLLM_CUTE_DSL_MLA_SPLIT_MIN_WAVES: '4'
+    MIMALLOC_ARENA_RESERVE: '0'
+    TRTLLM_CUTE_DSL_MLA_SPLIT_KV_TABLE: 16:8,32:6,64:6,128:4
+    TRTLLM_KDA_MTP_COMPACT: '1'
+    TRTLLM_KDA_MTP_COMPACT_QUANTIZED: '1'
+    TRTLLM_KDA_MTP_COMPACT_TWO_CTAS: '1'
+- name: ROUTER_ENV
+  uri: <workdir>
+  content: |
+    TRTLLM_SERVE_ENABLE_MSGSPEC: '1'
+    K3_TOKENIZER_FASTPATH: '1'
+workflow:
+  tasks:
+  - name: frontend
+    operator:
+      name: server
+      ntasks: 1
+    resources:
+      nodes:
+        indices:
+        - ${{ variables.FRONTEND_NODE }}
+    depends_on:
+    - prefill
+    - decode
+    script:
+    - set -euo pipefail
+    - unset UCX_NET_DEVICES UCX_TLS
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1 TMPDIR=/tmp
+    - export HF_MODULES_CACHE="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/hf-modules"
+    - export XDG_CACHE_HOME="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/cache"
+    - export TLLM_AUTOTUNER_CACHE_PATH="$XDG_CACHE_HOME/autotuner.json"
+    - mkdir -p "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+    - export ETCD_ENDPOINTS="${HEAD_NODE_IP}:2379" NATS_SERVER="nats://${HEAD_NODE_IP}:4222" DYN_NAMESPACE="k3-${SLURM_JOB_ID}"
+    - export DYN_SYSTEM_PORT=9200
+    - export DYN_K3_NATIVE_TEXT_COMPAT=0 DYN_RUNTIME_NUM_WORKER_THREADS=8 DYN_RUNTIME_MAX_BLOCKING_THREADS=16
+    - export PYTHONPATH="/opt/k3-dynamo/frontend"
+    - python3 -c 'import dynamo._core,hashlib;from pathlib import Path;p=Path(dynamo._core.__file__).resolve();assert
+      hashlib.sha256(p.read_bytes()).hexdigest()==__import__("os").environ["DYNAMO_FRONTEND_CORE_SHA256"];print("FRONTEND_CORE",p)'
+    - echo DYNAMO_FRONTEND_STARTING
+    - exec python3 -m dynamo.frontend --namespace "$DYN_NAMESPACE" --http-host 0.0.0.0 --http-port 8000 --discovery-backend
+      etcd --request-plane ${{ variables.DYNAMO_REQUEST_PLANE }} --event-plane nats --model-name /models/kimi-k3
+      --model-path /models/kimi-k3 --trust-remote-code --dyn-chat-processor dynamo --router-mode ${{ variables.DYNAMO_DECODE_ROUTER_MODE
+      }} --migration-limit 0
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: DYNAMO_FRONTEND_STARTING
+        timeout: 3600
+      failure:
+        log_watch:
+          regex_pattern: re:Traceback|panicked at
+  - name: control_plane
+    depends_on:
+    - client_gate

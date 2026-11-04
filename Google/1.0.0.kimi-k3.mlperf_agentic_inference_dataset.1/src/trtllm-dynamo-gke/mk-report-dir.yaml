@@ -1,0 +1,99 @@
+# Create the durable Kimi-K3 report and control-plane cache directories on every
+# node of the pool.
+#
+# v1.0.3: same report directory as v1.0.1/v1.0.2 (../../v1.0.1/kimi-k3/mk-report-dir.yaml
+# explains why it exists: twice the sflow copy-back lost a flawless run), plus
+# the Dynamo control-plane binary cache directory on the node SSD:
+#   <node-local-ssd>/kimi-reports/<sflow run dir name>
+#   <node-local-ssd>/model-cache/kimi-control-plane
+# (REPORTS_DIR and CONTROL_PLANE_DIR in the recipes; README.md).
+#
+# sflow 0.3.1.dev13 (the version the recipes were dry-run with) renders fs://
+# hostPaths without a `type`, so a missing directory would be created on the fly
+# as root:root 0755. Older sflow used `type: Directory` and refused the pod. Run
+# this once anyway: both versions then behave the same, and kimi-reports is
+# sticky world-writable like v1.0.1/v1.0.2's.
+#
+# Cheap, idempotent, harmless next to a running benchmark (it only mkdirs).
+# Run from this directory; it substitutes the pool the same way as
+# prepull-images.yaml:
+#
+#   POOL="REPLACE-WITH-NODE-POOL"
+#   [[ "${POOL}" =~ ^[a-z]([-a-z0-9]{0,38}[a-z0-9])?$ ]] || { echo "set POOL" >&2; exit 1; }
+#   sed "s|^\( *cloud\.google\.com/gke-nodepool:\).*\$|\1 ${POOL}|" mk-report-dir.yaml | kubectl apply -f -
+#   kubectl rollout status ds/kimi-k3-v103-mk-report-dir -n default --timeout=600s
+#   kubectl logs -n default -l app=kimi-k3-v103-mk-report-dir --prefix --tail=1
+#   kubectl delete ds kimi-k3-v103-mk-report-dir -n default    # the directories persist
+#
+# `rollout status` returns only when every pod is Ready, and the readiness
+# probe passes only once both directories exist on that node.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kimi-k3-v103-mk-report-dir
+  namespace: default
+  labels:
+    app: kimi-k3-v103-mk-report-dir
+spec:
+  selector:
+    matchLabels:
+      app: kimi-k3-v103-mk-report-dir
+  template:
+    metadata:
+      labels:
+        app: kimi-k3-v103-mk-report-dir
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: mkdir
+        # Multi-arch with bash (the nodes are arm64). The same reference as
+        # stage-kimi-k3-assets.yaml, so it is already cached after staging.
+        image: <registry>/cloudsdktool/google-cloud-cli:stable
+        imagePullPolicy: IfNotPresent
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -euo pipefail
+          D=/host-ssd/kimi-reports
+          CP=/host-ssd/model-cache/kimi-control-plane
+          mkdir -p "$D" "$CP"
+          chmod 1777 "$D"
+          chmod 0755 "$CP"
+          echo "ready on ${NODE_NAME}: $(ls -ld "$D" "$CP" | tr '\n' ' ')"
+          exec sleep infinity
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        readinessProbe:
+          exec:
+            command: ["bash", "-c", "test -d /host-ssd/kimi-reports && test -d /host-ssd/model-cache/kimi-control-plane"]
+          periodSeconds: 5
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {memory: 64Mi}
+        securityContext:
+          # Root writes the root-owned hostPath; nothing else is needed.
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+        - name: host-ssd
+          mountPath: /host-ssd
+      volumes:
+      - name: host-ssd
+        hostPath:
+          # The node's local SSD (also holds the staged checkpoints). Must exist:
+          # a node without it fails here instead of during a benchmark.
+          path: <node-local-ssd>
+          type: Directory

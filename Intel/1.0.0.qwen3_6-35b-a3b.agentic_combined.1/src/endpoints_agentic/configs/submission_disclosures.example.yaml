@@ -1,0 +1,82 @@
+# Schema-valid fictional example for a single-node, CPU-only submission campaign.
+# Replace the example identity, node inventory, CPU TDP, and sources with
+# verified information before using this for an actual submission. The reserved
+# example.invalid URL illustrates the field format; it is not power evidence.
+system:
+  submitter_org_names: "Example Organization"
+  submitter_contact: "benchmarks@example.invalid"
+  submission_id: "example-submission-001"
+  system_name: "Example Single Node CPU Server"
+  shortened_system_name: "Example CPU Server" # Required; maximum 20 characters
+  publication_status: "Available" # Available, Preview, or RDI
+  availability_url: "https://example.invalid/availability" # Reserved example.invalid URL; not evidence of availability
+  target_availability_date: null # Required as YYYY-MM-DD when publication_status is Preview
+  system_size: "One node"
+  division: "Standardized" # Standardized, Serviced, or RDI
+
+  # Optional sparse overlays, in the collector's node_types order. Supply only
+  # values that are missing from host observations; conflicting values fail.
+  node_types: []
+
+# Appendix E descriptor. The campaign derives system_desc_id. Supply node set
+# IDs, host ensemble IDs, and provisioned counts from a trusted host inventory;
+# they are checked against collected host facts. This example assumes the
+# collector reports ensemble 0 with one physical node.
+system_power:
+  cooling: "air" # air or liquid
+  node_sets:
+    - node_set_id: 0
+      system_node_ensemble_id: 0
+      nodes_provisioned: 1
+      power_method: "component_sum"
+      components:
+        cpu:
+          model: "Example CPU"
+          count_per_node: 2
+          tdp_per_unit:
+            value_w: 350
+            source_type: "vendor_spec"
+            source: "https://example.invalid/example-cpu/specification"
+        accelerator:
+          count_per_node: 0
+          # The checker requires a sourced value even when the count is zero.
+          tdp_per_unit:
+            value_w: 0
+            source_type: "vendor_spec"
+            source: "https://example.invalid/example-server/specification"
+        scale_up_network:
+          method: "none"
+  scale_out:
+    present: false
+
+# Appendix E alternatives. The active example sums CPU components; the checker
+# adds the prescribed 50% overhead for air cooling (2 x 350 W x 1.5 = 1050 W).
+#
+# A per-node published rating uses NodeSet fields:
+# node_sets:
+#   - node_set_id: null # unique descriptor ID; supply manually
+#     system_node_ensemble_id: null # copy the matching observed ensemble ID
+#     nodes_provisioned: null # copy the matching observed number_of_nodes
+#     power_method: null # component_sum, published_system, or node_scaling
+#     published_power:
+#       value_w: null
+#       value_kw: null
+#       value_pj: null
+#       source_type: null # vendor_spec, publication, public_statement, or mlc_default
+#       source: null # public URL, or Appendix D subsection for mlc_default
+#     nodes_in_published_rack: null
+#     components: null
+#
+# A whole-system published rating uses declared_provisioned_power with the same
+# SourcedValue fields (exactly one value and a verified source); use value_w or
+# value_kw for provisioned power. ScaleOut fields are present, cabling
+# (passive or active_optical), required_bandwidth_tbps, nics, and switches.
+# Nics fields are count_per_node, bandwidth_per_nic_gbps, counted, tdp_per_nic,
+# and excluded_from_published_power. Each switches entry has model, count,
+# bandwidth_tbps, and power_per_switch. When present is true, complete
+# applicable fields from verified fabric specifications.
+#
+# declared_provisioned_power:
+#   value_w: 1000
+#   source_type: "vendor_spec"
+#   source: "https://example.invalid/example-system/power-specification"

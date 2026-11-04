@@ -1,0 +1,65 @@
+{
+  "version": "0.1",
+  "variables": {
+    "SFLOW_REPOSITORY": {
+      "value": "https://github.com/NVIDIA/nv-sflow.git"
+    },
+    "SFLOW_REVISION": {
+      "value": "b8afb5b86b3f46d9fa771531990fc7afaefc69b9"
+    },
+    "SFLOW_VERSION": {
+      "value": "0.3.1"
+    },
+    "SWE_PYTHON_VERSION": {
+      "value": "3.12"
+    },
+    "ENDPOINTS_REPOSITORY": {
+      "value": "https://github.com/mlcommons/endpoints.git"
+    },
+    "ENDPOINTS_REVISION": {
+      "value": "d3c57f2eba127c819e5a8fd83101d9e5f4e15fce"
+    },
+    "MODEL_REPOSITORY": {
+      "value": "Qwen/Qwen3.6-35B-A3B"
+    },
+    "MODEL_REVISION": {
+      "value": "995ad96eacd98c81ed38be0c5b274b04031597b0"
+    },
+    "DATASET_SHA256": {
+      "value": "1beb24c882122df96571cf11b390acbea388944038bc55c78b891475459014ae"
+    },
+    "GB300_SERVER_IMAGE": {
+      "value": "docker://registry.gitlab.com#nvidia/mlperf-inference-partner/nv-mlpinf-partner/centml-gb300-rubin@sha256:cb0b77df93c0f9d89b8bca7f59a2520e582b9dbebdd606f7d9f36f57632a8b71"
+    },
+    "VR_NVL72_SERVER_IMAGE": {
+      "value": "docker://registry.gitlab.com#nvidia/mlperf-inference-partner/nv-mlpinf-partner/centml-gb300-rubin@sha256:f56c2ac713a2228372afcf295dc102c29d07609462a2a9e734033a5f4223f7e8"
+    },
+    "CLIENT_IMAGE": {
+      "value": "docker://ghcr.io#mlcommons/endpoints:d3c57f2"
+    },
+    "CLIENT_IMAGE_DIGEST": {
+      "value": "sha256:1523051b141437b25083924d6428082f435713516eee71c54ae207b393900b2d"
+    },
+    "SWE_IMAGE_REGISTRY": {
+      "value": "registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/swebench-arm64"
+    },
+    "SWE_REGISTRY_CHECK_TAG": {
+      "value": "v4.1.0-arm64"
+    },
+    "VLLM_BRANCH": {
+      "value": "mlperf-end-multiturn-v1.0-qwen-latest"
+    },
+    "VLLM_COMMIT": {
+      "value": "7cc4a74c34270ca783e535f7ec07134f92159482"
+    },
+    "VR_NVL72_VLLM_BRANCH": {
+      "value": "mlperf-end-multiturn-v1.0-qwen-v2"
+    },
+    "VR_NVL72_VLLM_COMMIT": {
+      "value": "d48687fdeedd07c4eebe455b1dcbcdb09ad8b55e"
+    },
+    "DYNAMO_VERSION": {
+      "value": "1.4.2"
+    }
+  }
+}

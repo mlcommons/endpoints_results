@@ -1,0 +1,38 @@
+# Cache directories
+HF_HOME: "${RECIPE_DIR}/.cache/vllm/hf_home"
+VLLM_CACHE_ROOT: "${RECIPE_DIR}/.cache/vllm/dynamo-job-${SLURM_JOB_ID}-r${SLURM_RESTART_COUNT}/worker-${SFLOW_REPLICA_INDEX}/vllm"
+TORCHINDUCTOR_CACHE_DIR: "${RECIPE_DIR}/.cache/vllm/dynamo-job-${SLURM_JOB_ID}-r${SLURM_RESTART_COUNT}/worker-${SFLOW_REPLICA_INDEX}/inductor"
+TRITON_CACHE_DIR: "${RECIPE_DIR}/.cache/persist/triton"
+TILELANG_CACHE_DIR: "${RECIPE_DIR}/.cache/persist/tilelang"
+VLLM_FLASHINFER_AUTOTUNE_CACHE_DIR: "${RECIPE_DIR}/.cache/persist/fi_autotune"
+DG_JIT_CACHE_DIR: "${RECIPE_DIR}/.cache/persist/deep_gemm"
+FLASHINFER_WORKSPACE_BASE: "${RECIPE_DIR}/.cache/persist/flashinfer"
+
+XDG_CACHE_HOME: "${RECIPE_DIR}/.cache/vllm/dynamo-job-${SLURM_JOB_ID}-r${SLURM_RESTART_COUNT}/worker-${SFLOW_REPLICA_INDEX}/xdg"
+
+# Per-worker runtime directories
+VLLM_RPC_BASE_PATH: "/tmp/dsv41-${SLURM_JOB_ID}-w${SFLOW_REPLICA_INDEX}/rpc"
+TMPDIR: "/tmp/dsv41-${SLURM_JOB_ID}-w${SFLOW_REPLICA_INDEX}/tmp"
+
+PROMETHEUS_MULTIPROC_DIR: "/tmp/dsv41-${SLURM_JOB_ID}-w${SFLOW_REPLICA_INDEX}/prometheus"
+
+# Runtime settings
+HF_HUB_OFFLINE: "1"
+# Override SFlow's one-GPU mask for EP4; local DP rank selects the GPU.
+CUDA_VISIBLE_DEVICES: "0,1,2,3"
+TOKENIZERS_PARALLELISM: "false"
+VLLM_ENGINE_READY_TIMEOUT_S: "3600"
+
+# External DP routing
+VLLM_DP_RANK_LOCAL_OVERRIDE: "${SFLOW_REPLICA_INDEX}"
+VLLM_PORT: "${WORKER_VLLM_PORT}"
+
+# Portable Rubin-branch runtime optimizations; GB300 uses SM100 kernels.
+VLLM_DSV41_GRAPH_BOUNDED_REPLAY: "1"
+VLLM_ENGINE_DEFER_FULL_GC: "1"
+VLLM_DSV41_ENGRAM_ALL_TO_ALL: "1"
+VLLM_DSV41_MEGAMOE_SM107: "0"
+VLLM_DSV41_MEGAMOE_PERDIE: "0"
+VLLM_MXFP8_FI_LARGE_M_BACKEND: ""
+VLLM_MXFP8_TRITON_QUANT: "1"
+VLLM_DSV41_FAST_CANDIDATE_TOPK: "1"

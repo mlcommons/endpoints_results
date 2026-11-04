@@ -1,0 +1,9148 @@
+{
+ "_metadata": {
+  "flashinfer_version": "0.6.18.post1",
+  "cuda_version": "13.4",
+  "cublas_version": "13.7.0",
+  "cudnn_version": "92501",
+  "cudnn_frontend_version": "1.31.0",
+  "gpu": "NVIDIA Graphics Device"
+ },
+ "_records": {
+  "vllm_autotune": {
+   "schema": 2,
+   "host": {
+    "flashinfer_version": "0.6.18.post1",
+    "cuda_version": "13.4",
+    "cublas_version": "13.7.0",
+    "cudnn_version": "92501",
+    "cudnn_frontend_version": "1.31.0",
+    "gpu": "NVIDIA Graphics Device",
+    "flashinfer_git": "8bc3b578027791336c6ae87db5c9d76f82cef8bc",
+    "sm_count": "212",
+    "cc": "10.7"
+   },
+   "groups": {
+    "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a": {
+     "op": "flashinfer::trtllm_fp8_block_scale_moe",
+     "runner": "MoERunner",
+     "fp": "91dd1279085e0f4a",
+     "parts": {
+      "runner_src": {
+       "flashinfer.fused_moe.core._get_trtllm_moe_sm100_module_impl.<locals>.MoERunner": "a4cf1af5169dacae"
+      },
+      "kernels": {},
+      "env": {
+       "GS2_ROUTE": "1",
+       "VLLM_FI_SM107_MOE_PDL_MAX_TOKENS": "1024"
+      },
+      "binaries": {}
+     }
+    },
+    "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed": {
+     "op": "mxfp8_gemm",
+     "runner": "CuteDSLMxfp8GemmRunner",
+     "fp": "e77157ad17a0f7ed",
+     "parts": {
+      "runner_src": {
+       "vllm.model_executor.layers.quantization.utils.flashinfer_mxfp8_splitk._cute_dsl_gemm_mxfp8_runner.<locals>.CuteDSLMxfp8GemmRunner": "9910feae4ec65608",
+       "flashinfer.gemm.gemm_base._cute_dsl_gemm_mxfp8_runner.<locals>.CuteDSLMxfp8GemmRunner": "de6b7ec299f45801"
+      },
+      "kernels": {
+       "flashinfer.gemm.kernels.dense_blockscaled_gemm_sm100": "072b38334c07aafd",
+       "flashinfer.gemm.kernels.dense_blockscaled_gemm_sm100_common": "fe37095a053c5c49",
+       "flashinfer.gemm.kernels.dense_blockscaled_gemm_sm100_splitk": "00a8fa9a1bd96b98",
+       "flashinfer.gemm.kernels.dense_blockscaled_gemm_sm107": "5959d66e7b8becc0",
+       "flashinfer.gemm.kernels.utils": "705a10946cb6ee68"
+      },
+      "env": {
+       "LCD_FI_OVERLAY": "1",
+       "LCD_FI_PREWAIT": "1",
+       "LCD_FI_PREWAITS": "1",
+       "LCD_FI_PREWAIT_STAGES": "4",
+       "PFWS": "1",
+       "VLLM_FLASHINFER_MXFP8_K64": "False",
+       "VLLM_FLASHINFER_MXFP8_K64_MIN_M": "256",
+       "VLLM_FLASHINFER_MXFP8_K64_TACTICS": "512,256,256,2;256,256,256,2;256,128,256,2",
+       "VLLM_MXFP8_EMULATION_DEQUANT_AT_LOAD": "True",
+       "VLLM_MXFP8_SPLITK_MIDM": "True",
+       "VLLM_MXFP8_SPLITK_MIDM_MAX_M": "2048",
+       "VLLM_MXFP8_SPLITK_MIDM_TACTICS": "64,2;64,4;128,2;128,4",
+       "VLLM_MXFP8_TUNE_BUCKETS": "272-512:16"
+      },
+      "binaries": {},
+      "tune_buckets": [
+       272,
+       288,
+       304,
+       320,
+       336,
+       352,
+       368,
+       384,
+       400,
+       416,
+       432,
+       448,
+       464,
+       480,
+       496,
+       512
+      ]
+     }
+    },
+    "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098": {
+     "op": "mxfp8_gemm",
+     "runner": "CuteDSLMxfp8GemmRunner",
+     "fp": "ecba68a0dff66098",
+     "parts": {
+      "runner_src": {
+       "flashinfer.gemm.gemm_base._cute_dsl_gemm_mxfp8_runner.<locals>.CuteDSLMxfp8GemmRunner": "de6b7ec299f45801"
+      },
+      "kernels": {
+       "flashinfer.gemm.kernels.dense_blockscaled_gemm_sm100": "072b38334c07aafd",
+       "flashinfer.gemm.kernels.dense_blockscaled_gemm_sm100_common": "fe37095a053c5c49",
+       "flashinfer.gemm.kernels.dense_blockscaled_gemm_sm100_splitk": "00a8fa9a1bd96b98",
+       "flashinfer.gemm.kernels.dense_blockscaled_gemm_sm107": "5959d66e7b8becc0",
+       "flashinfer.gemm.kernels.utils": "705a10946cb6ee68"
+      },
+      "env": {
+       "LCD_FI_OVERLAY": "1",
+       "LCD_FI_PREWAIT": "1",
+       "LCD_FI_PREWAITS": "1",
+       "LCD_FI_PREWAIT_STAGES": "4",
+       "PFWS": "1",
+       "VLLM_FLASHINFER_MXFP8_K64": "False",
+       "VLLM_FLASHINFER_MXFP8_K64_MIN_M": "256",
+       "VLLM_FLASHINFER_MXFP8_K64_TACTICS": "512,256,256,2;256,256,256,2;256,128,256,2",
+       "VLLM_MXFP8_EMULATION_DEQUANT_AT_LOAD": "True",
+       "VLLM_MXFP8_SPLITK_MIDM": "False",
+       "VLLM_MXFP8_SPLITK_MIDM_MAX_M": "2048",
+       "VLLM_MXFP8_SPLITK_MIDM_TACTICS": "64,2;64,4;128,2;128,4",
+       "VLLM_MXFP8_TUNE_BUCKETS": "None"
+      },
+      "binaries": {},
+      "tune_buckets": []
+     }
+    }
+   },
+   "provenance": {
+    "kind": "pinned",
+    "generated": "2026-10-09T00:45:51Z",
+    "primary": "c512",
+    "sets": {
+     "c512": {
+      "groups": [
+       "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+       "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed"
+      ],
+      "workers": [
+       "node-0:0b0238b0-3822",
+       "node-0:6974fe13-df70",
+       "node-0:9506a8dc-1046",
+       "node-0:f1fe12fc-8c85",
+       "node-1:33ae4661-5afe",
+       "node-1:6f2ada03-9c46",
+       "node-1:d0d3f50c-faaa",
+       "node-1:fa49ef8c-d550"
+      ]
+     },
+     "c32": {
+      "groups": [
+       "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+       "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098"
+      ],
+      "workers": [
+       "node-2:66cd2f53-1ea9",
+       "node-2:a2f9e7af-3542",
+       "node-2:c3129ef8-34f3",
+       "node-2:d64350d0-a4ed",
+       "node-3:160f5314-fda6",
+       "node-3:d207af8f-6170",
+       "node-3:d5463e15-2ded",
+       "node-3:f07f3e7f-8530"
+      ]
+     }
+    },
+    "method": "per key: tactic with the lowest median over workers of each worker's median over CUDA-graph replays (vLLM record mode)"
+   },
+   "alt": {
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2a30ac2ec8581302",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 2.894,
+       "us2": 3.192,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0059
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       2
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "0f114a4760001004",
+       "nt": 172,
+       "ra": "44136fa355b3678a",
+       "us": 4.773,
+       "us2": 4.87,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0196
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        4,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2a30ac2ec8581302",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 41.211,
+       "us2": 41.491,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0061
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       2
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "f42b02f4e5b70cc0",
+       "nt": 172,
+       "ra": "44136fa355b3678a",
+       "us": 4.381,
+       "us2": 4.409,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0039
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "14204e0beed36cf2",
+       "nt": 137,
+       "ra": "44136fa355b3678a",
+       "us": 3.584,
+       "us2": 4.351,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0119
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "14204e0beed36cf2",
+       "nt": 137,
+       "ra": "44136fa355b3678a",
+       "us": 2.553,
+       "us2": 2.579,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0178
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "b75755d24a5c5ad3",
+       "nt": 138,
+       "ra": "44136fa355b3678a",
+       "us": 4.185,
+       "us2": 4.222,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0374
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "c70dd9eb81a4fbde",
+       "nt": 132,
+       "ra": "44136fa355b3678a",
+       "us": 12.71,
+       "us2": 12.74,
+       "w": 8,
+       "agree": 5,
+       "wspread": 0.0213
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "b5bc27269f6b1ea1",
+       "nt": 138,
+       "ra": "44136fa355b3678a",
+       "us": 10.514,
+       "us2": 11.379,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0267
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "111adc5a988a74bd",
+       "nt": 153,
+       "ra": "44136fa355b3678a",
+       "us": 6.856,
+       "us2": 6.898,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0075
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        128
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "111adc5a988a74bd",
+       "nt": 153,
+       "ra": "44136fa355b3678a",
+       "us": 3.028,
+       "us2": 3.049,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0138
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 3.974,
+       "us2": 3.977,
+       "w": 8,
+       "agree": 4,
+       "wspread": 0.0046
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "9f11ec800541a1f6",
+       "nt": 164,
+       "ra": "44136fa355b3678a",
+       "us": 5.253,
+       "us2": 5.458,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0169
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        4,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 45.752,
+       "us2": 49.566,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0073
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "95dbae2ed22a8764",
+       "nt": 164,
+       "ra": "44136fa355b3678a",
+       "us": 4.876,
+       "us2": 4.938,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0262
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "9d7fb15d5ec82270",
+       "nt": 126,
+       "ra": "44136fa355b3678a",
+       "us": 5.678,
+       "us2": 5.758,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.017
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "9d7fb15d5ec82270",
+       "nt": 126,
+       "ra": "44136fa355b3678a",
+       "us": 2.664,
+       "us2": 2.678,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0202
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        4
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "cc255d4d594f24d3",
+       "nt": 141,
+       "ra": "44136fa355b3678a",
+       "us": 4.284,
+       "us2": 4.301,
+       "w": 8,
+       "agree": 5,
+       "wspread": 0.0429
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 15.456,
+       "us2": 15.515,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0201
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        2
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "46ac844b6d430ea8",
+       "nt": 122,
+       "ra": "44136fa355b3678a",
+       "us": 12.016,
+       "us2": 12.126,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.016
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        4
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "7d4218e685885c46",
+       "nt": 171,
+       "ra": "44136fa355b3678a",
+       "us": 7.075,
+       "us2": 7.081,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0183
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        128
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "7d4218e685885c46",
+       "nt": 171,
+       "ra": "44136fa355b3678a",
+       "us": 3.103,
+       "us2": 3.122,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0123
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "cc255d4d594f24d3",
+       "nt": 141,
+       "ra": "44136fa355b3678a",
+       "us": 4.369,
+       "us2": 4.379,
+       "w": 8,
+       "agree": 5,
+       "wspread": 0.0209
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 17.927,
+       "us2": 17.98,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.027
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 14.373,
+       "us2": 14.376,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0422
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "7d4218e685885c46",
+       "nt": 171,
+       "ra": "44136fa355b3678a",
+       "us": 7.303,
+       "us2": 7.534,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0255
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "7d4218e685885c46",
+       "nt": 171,
+       "ra": "44136fa355b3678a",
+       "us": 3.173,
+       "us2": 3.177,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0154
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        16
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2b7b64413b35521c",
+       "nt": 128,
+       "ra": "44136fa355b3678a",
+       "us": 2.833,
+       "us2": 3.127,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0035
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        16
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "b2b29fad7d09aaa7",
+       "nt": 169,
+       "ra": "44136fa355b3678a",
+       "us": 4.773,
+       "us2": 4.818,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0129
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        4,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2b7b64413b35521c",
+       "nt": 128,
+       "ra": "44136fa355b3678a",
+       "us": 41.941,
+       "us2": 42.176,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0069
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        16
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       2
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "8f45affd4f4b9031",
+       "nt": 169,
+       "ra": "44136fa355b3678a",
+       "us": 4.345,
+       "us2": 4.472,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0082
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        16
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "de844f3e57a7184e",
+       "nt": 134,
+       "ra": "44136fa355b3678a",
+       "us": 3.567,
+       "us2": 4.254,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0136
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "de844f3e57a7184e",
+       "nt": 134,
+       "ra": "44136fa355b3678a",
+       "us": 2.557,
+       "us2": 2.576,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0165
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 16.03,
+       "us2": 16.104,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0265
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 133.587,
+       "us2": 138.946,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0178
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 104.891,
+       "us2": 105.782,
+       "w": 8,
+       "agree": 5,
+       "wspread": 0.0448
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 49.08,
+       "us2": 49.971,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0296
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        2
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 12.43,
+       "us2": 12.469,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0206
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "c00447996e2ad317",
+       "nt": 153,
+       "ra": "44136fa355b3678a",
+       "us": 4.629,
+       "us2": 4.76,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0148
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        2
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 18.91,
+       "us2": 19.822,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0193
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 15.259,
+       "us2": 15.423,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0204
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "113b82b80e02976d",
+       "nt": 168,
+       "ra": "44136fa355b3678a",
+       "us": 9.012,
+       "us2": 9.037,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0159
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        192
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "113b82b80e02976d",
+       "nt": 168,
+       "ra": "44136fa355b3678a",
+       "us": 3.438,
+       "us2": 3.544,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0346
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2a30ac2ec8581302",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 2.889,
+       "us2": 3.184,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0042
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        16
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "0f114a4760001004",
+       "nt": 172,
+       "ra": "44136fa355b3678a",
+       "us": 4.802,
+       "us2": 4.86,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0328
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        4,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2a30ac2ec8581302",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 41.363,
+       "us2": 41.59,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.007
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        16
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "f42b02f4e5b70cc0",
+       "nt": 172,
+       "ra": "44136fa355b3678a",
+       "us": 4.376,
+       "us2": 4.379,
+       "w": 8,
+       "agree": 4,
+       "wspread": 0.0189
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "14204e0beed36cf2",
+       "nt": 137,
+       "ra": "44136fa355b3678a",
+       "us": 3.579,
+       "us2": 4.35,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0117
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "14204e0beed36cf2",
+       "nt": 137,
+       "ra": "44136fa355b3678a",
+       "us": 2.562,
+       "us2": 2.57,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0179
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "c00447996e2ad317",
+       "nt": 153,
+       "ra": "44136fa355b3678a",
+       "us": 4.723,
+       "us2": 4.793,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.016
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 21.494,
+       "us2": 21.643,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0158
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 17.568,
+       "us2": 17.711,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0184
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        4,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "113b82b80e02976d",
+       "nt": 168,
+       "ra": "44136fa355b3678a",
+       "us": 9.004,
+       "us2": 9.05,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0164
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        192
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "113b82b80e02976d",
+       "nt": 168,
+       "ra": "44136fa355b3678a",
+       "us": 3.491,
+       "us2": 3.589,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.015
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 3.976,
+       "us2": 4.015,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0357
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "a54ed01e09cd5ea4",
+       "nt": 171,
+       "ra": "44136fa355b3678a",
+       "us": 5.905,
+       "us2": 6.066,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0471
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "9974816d42c10547",
+       "nt": 168,
+       "ra": "44136fa355b3678a",
+       "us": 5.502,
+       "us2": 5.504,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0263
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "9d7fb15d5ec82270",
+       "nt": 126,
+       "ra": "44136fa355b3678a",
+       "us": 5.696,
+       "us2": 5.798,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0225
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        1,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "9d7fb15d5ec82270",
+       "nt": 126,
+       "ra": "44136fa355b3678a",
+       "us": 2.653,
+       "us2": 2.683,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0215
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        4
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "d23bc0623bed51a1",
+       "nt": 168,
+       "ra": "44136fa355b3678a",
+       "us": 4.889,
+       "us2": 4.934,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0347
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        4,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 25.571,
+       "us2": 25.704,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0313
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        4,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 19.835,
+       "us2": 19.936,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0068
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        4,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "8b784a9c53f9c8a7",
+       "nt": 162,
+       "ra": "44136fa355b3678a",
+       "us": 11.045,
+       "us2": 11.115,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0091
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        4,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "8b784a9c53f9c8a7",
+       "nt": 162,
+       "ra": "44136fa355b3678a",
+       "us": 3.794,
+       "us2": 3.824,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.015
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "d23bc0623bed51a1",
+       "nt": 168,
+       "ra": "44136fa355b3678a",
+       "us": 4.967,
+       "us2": 5.051,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0794
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 29.96,
+       "us2": 30.662,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0411
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        4
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 23.884,
+       "us2": 24.02,
+       "w": 8,
+       "agree": 3,
+       "wspread": 0.0075
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "8b784a9c53f9c8a7",
+       "nt": 162,
+       "ra": "44136fa355b3678a",
+       "us": 11.015,
+       "us2": 11.197,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0095
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        128
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "8b784a9c53f9c8a7",
+       "nt": 162,
+       "ra": "44136fa355b3678a",
+       "us": 3.958,
+       "us2": 3.958,
+       "w": 8,
+       "agree": 1,
+       "wspread": 0.0426
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       2
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "adfcb3218379fd26",
+       "nt": 125,
+       "ra": "44136fa355b3678a",
+       "us": 3.226,
+       "us2": 3.585,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0123
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "a444e4835c44d4bf",
+       "nt": 166,
+       "ra": "44136fa355b3678a",
+       "us": 4.88,
+       "us2": 5.038,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0156
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        4,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "adfcb3218379fd26",
+       "nt": 125,
+       "ra": "44136fa355b3678a",
+       "us": 42.57,
+       "us2": 42.765,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0117
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "0547b95f7b47f30c",
+       "nt": 166,
+       "ra": "44136fa355b3678a",
+       "us": 4.542,
+       "us2": 4.585,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0116
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       2
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "6e70c41251f1929a",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 4.316,
+       "us2": 4.874,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.046
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "6e70c41251f1929a",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 2.55,
+       "us2": 2.674,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0183
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 27.493,
+       "us2": 27.88,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0636
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 268.39,
+       "us2": 279.984,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0674
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 205.306,
+       "us2": 208.162,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0448
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 89.846,
+       "us2": 89.96,
+       "w": 8,
+       "agree": 4,
+       "wspread": 0.05
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        2
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 21.006,
+       "us2": 21.21,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0207
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        4,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "835df634b6f854de",
+       "nt": 167,
+       "ra": "44136fa355b3678a",
+       "us": 6.022,
+       "us2": 6.03,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0222
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        2
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 34.645,
+       "us2": 35.328,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0426
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 27.176,
+       "us2": 27.594,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0108
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        4,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "72e7fb42619897c4",
+       "nt": 144,
+       "ra": "44136fa355b3678a",
+       "us": 14.511,
+       "us2": 14.627,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.015
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "72e7fb42619897c4",
+       "nt": 144,
+       "ra": "44136fa355b3678a",
+       "us": 4.326,
+       "us2": 4.366,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0246
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2a30ac2ec8581302",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 2.887,
+       "us2": 3.186,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0056
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        16
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "0f114a4760001004",
+       "nt": 172,
+       "ra": "44136fa355b3678a",
+       "us": 4.78,
+       "us2": 4.788,
+       "w": 8,
+       "agree": 3,
+       "wspread": 0.0232
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        4,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2a30ac2ec8581302",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 41.133,
+       "us2": 41.522,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0068
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       2
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "f42b02f4e5b70cc0",
+       "nt": 172,
+       "ra": "44136fa355b3678a",
+       "us": 4.422,
+       "us2": 4.43,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0106
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "14204e0beed36cf2",
+       "nt": 137,
+       "ra": "44136fa355b3678a",
+       "us": 3.566,
+       "us2": 4.354,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0101
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "14204e0beed36cf2",
+       "nt": 137,
+       "ra": "44136fa355b3678a",
+       "us": 2.553,
+       "us2": 2.573,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0188
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "835df634b6f854de",
+       "nt": 167,
+       "ra": "44136fa355b3678a",
+       "us": 6.078,
+       "us2": 6.137,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0466
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        2
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 38.525,
+       "us2": 39.744,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0269
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 30.014,
+       "us2": 30.451,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0183
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        4,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "72e7fb42619897c4",
+       "nt": 144,
+       "ra": "44136fa355b3678a",
+       "us": 14.668,
+       "us2": 14.744,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0191
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "72e7fb42619897c4",
+       "nt": 144,
+       "ra": "44136fa355b3678a",
+       "us": 4.585,
+       "us2": 4.591,
+       "w": 8,
+       "agree": 4,
+       "wspread": 0.0474
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 4.055,
+       "us2": 4.072,
+       "w": 8,
+       "agree": 4,
+       "wspread": 0.065
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "c2866854b3730b26",
+       "nt": 158,
+       "ra": "44136fa355b3678a",
+       "us": 8.048,
+       "us2": 8.186,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0339
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "c76d66b7a3cb7d01",
+       "nt": 167,
+       "ra": "44136fa355b3678a",
+       "us": 6.724,
+       "us2": 7.165,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0557
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        4
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "cc255d4d594f24d3",
+       "nt": 141,
+       "ra": "44136fa355b3678a",
+       "us": 5.954,
+       "us2": 5.977,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0101
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "cc255d4d594f24d3",
+       "nt": 141,
+       "ra": "44136fa355b3678a",
+       "us": 2.756,
+       "us2": 2.763,
+       "w": 8,
+       "agree": 5,
+       "wspread": 0.022
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 3.971,
+       "us2": 4.036,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0119
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "f553e961ec9ea2fd",
+       "nt": 161,
+       "ra": "44136fa355b3678a",
+       "us": 5.179,
+       "us2": 5.238,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0114
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        4,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 43.334,
+       "us2": 44.194,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0066
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2ddcc90e63cd7cbd",
+       "nt": 161,
+       "ra": "44136fa355b3678a",
+       "us": 4.766,
+       "us2": 4.808,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0107
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "9d7fb15d5ec82270",
+       "nt": 126,
+       "ra": "44136fa355b3678a",
+       "us": 5.71,
+       "us2": 5.748,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0108
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "9d7fb15d5ec82270",
+       "nt": 126,
+       "ra": "44136fa355b3678a",
+       "us": 2.676,
+       "us2": 2.68,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0204
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "295164389f846181",
+       "nt": 123,
+       "ra": "44136fa355b3678a",
+       "us": 4.141,
+       "us2": 4.143,
+       "w": 8,
+       "agree": 5,
+       "wspread": 0.0694
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "4d81f0281973ea0a",
+       "nt": 138,
+       "ra": "44136fa355b3678a",
+       "us": 11.094,
+       "us2": 11.172,
+       "w": 8,
+       "agree": 7,
+       "wspread": 0.0295
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        2
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "72e7fb42619897c4",
+       "nt": 144,
+       "ra": "44136fa355b3678a",
+       "us": 9.343,
+       "us2": 9.343,
+       "w": 8,
+       "agree": 4,
+       "wspread": 0.0254
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        64
+       ],
+       [
+        2,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "de3d3aad7914d9c6",
+       "nt": 147,
+       "ra": "44136fa355b3678a",
+       "us": 6.194,
+       "us2": 6.459,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0184
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        64
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "de3d3aad7914d9c6",
+       "nt": 147,
+       "ra": "44136fa355b3678a",
+       "us": 2.818,
+       "us2": 2.927,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0147
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2a30ac2ec8581302",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 2.89,
+       "us2": 3.195,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0048
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        16
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "0f114a4760001004",
+       "nt": 172,
+       "ra": "44136fa355b3678a",
+       "us": 4.794,
+       "us2": 4.801,
+       "w": 8,
+       "agree": 3,
+       "wspread": 0.0113
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        4,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "2a30ac2ec8581302",
+       "nt": 131,
+       "ra": "44136fa355b3678a",
+       "us": 41.79,
+       "us2": 41.886,
+       "w": 8,
+       "agree": 6,
+       "wspread": 0.0083
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       2
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "f42b02f4e5b70cc0",
+       "nt": 172,
+       "ra": "44136fa355b3678a",
+       "us": 4.404,
+       "us2": 4.433,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0047
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        8
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       4
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "14204e0beed36cf2",
+       "nt": 137,
+       "ra": "44136fa355b3678a",
+       "us": 3.557,
+       "us2": 4.367,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0145
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        128,
+        32
+       ],
+       [
+        1,
+        1
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "14204e0beed36cf2",
+       "nt": 137,
+       "ra": "44136fa355b3678a",
+       "us": 2.555,
+       "us2": 2.574,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.017
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        2
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "46aaec8cdca0a45c",
+       "nt": 142,
+       "ra": "44136fa355b3678a",
+       "us": 8.922,
+       "us2": 9.035,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0164
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        2
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 72.192,
+       "us2": 73.059,
+       "w": 8,
+       "agree": 1,
+       "wspread": 0.0665
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 54.834,
+       "us2": 55.144,
+       "w": 8,
+       "agree": 5,
+       "wspread": 0.0308
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        192
+       ],
+       [
+        2,
+        4
+       ],
+       true,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 26.741,
+       "us2": 26.848,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.018
+      }
+     ]
+    ],
+    "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+     [
+      "CuteDSLMxfp8GemmRunner",
+      [
+       [
+        256,
+        256
+       ],
+       [
+        2,
+        1
+       ],
+       false,
+       false,
+       1
+      ],
+      {
+       "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|ecba68a0dff66098",
+       "tl": "39c89b7d0fce313c",
+       "nt": 120,
+       "ra": "44136fa355b3678a",
+       "us": 6.596,
+       "us2": 6.684,
+       "w": 8,
+       "agree": 8,
+       "wspread": 0.0393
+      }
+     ]
+    ]
+   }
+  }
+ },
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((1, 0), (1, 256), (1,), (1,), (1, 2048), (1, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   8,
+   117
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 11.894,
+   "us2": 11.933,
+   "w": 16,
+   "agree": 8,
+   "wspread": 0.0239
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((1024, 0), (1024, 256), (1024,), (1024,), (1024, 2048), (1024, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   27
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "9787633c1cf2a666",
+   "nt": 1408,
+   "ra": "091372d51beb9e32",
+   "us": 95.149,
+   "us2": 95.341,
+   "w": 16,
+   "agree": 14,
+   "wspread": 0.0285
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((128, 0), (128, 256), (128,), (128,), (128, 2048), (128, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   16,
+   774
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 74.997,
+   "us2": 75.024,
+   "w": 16,
+   "agree": 2,
+   "wspread": 0.0087
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((1280, 0), (1280, 256), (1280,), (1280,), (1280, 2048), (1280, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   27
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "80de78dcc4b19ab9",
+   "nt": 626,
+   "ra": "091372d51beb9e32",
+   "us": 93.669,
+   "us2": 93.741,
+   "w": 16,
+   "agree": 13,
+   "wspread": 0.0287
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((1536, 0), (1536, 256), (1536,), (1536,), (1536, 2048), (1536, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   64,
+   7
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "80de78dcc4b19ab9",
+   "nt": 626,
+   "ra": "091372d51beb9e32",
+   "us": 92.699,
+   "us2": 92.709,
+   "w": 16,
+   "agree": 9,
+   "wspread": 0.0149
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((16, 0), (16, 256), (16,), (16,), (16, 2048), (16, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   8,
+   398
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 36.726,
+   "us2": 36.776,
+   "w": 16,
+   "agree": 8,
+   "wspread": 0.0132
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((16384, 0), (16384, 256), (16384,), (16384,), (16384, 2048), (16384, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   23
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "4fe994b5c319940a",
+   "nt": 34,
+   "ra": "091372d51beb9e32",
+   "us": 287.222,
+   "us2": 287.251,
+   "w": 16,
+   "agree": 12,
+   "wspread": 0.0068
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((1792, 0), (1792, 256), (1792,), (1792,), (1792, 2048), (1792, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   64,
+   13
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "80de78dcc4b19ab9",
+   "nt": 626,
+   "ra": "091372d51beb9e32",
+   "us": 92.499,
+   "us2": 92.562,
+   "w": 16,
+   "agree": 1,
+   "wspread": 0.0242
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((2, 0), (2, 256), (2,), (2,), (2, 2048), (2, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   8,
+   169
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 13.822,
+   "us2": 13.829,
+   "w": 16,
+   "agree": 0,
+   "wspread": 0.0368
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((2048, 0), (2048, 256), (2048,), (2048,), (2048, 2048), (2048, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   27
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "80de78dcc4b19ab9",
+   "nt": 626,
+   "ra": "091372d51beb9e32",
+   "us": 91.712,
+   "us2": 91.886,
+   "w": 16,
+   "agree": 13,
+   "wspread": 0.0271
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((256, 0), (256, 256), (256,), (256,), (256, 2048), (256, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   16,
+   298
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 76.096,
+   "us2": 76.134,
+   "w": 16,
+   "agree": 7,
+   "wspread": 0.0217
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((2560, 0), (2560, 256), (2560,), (2560,), (2560, 2048), (2560, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   27
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "b82de18b3ad6f5a0",
+   "nt": 50,
+   "ra": "091372d51beb9e32",
+   "us": 94.824,
+   "us2": 94.899,
+   "w": 16,
+   "agree": 8,
+   "wspread": 0.0232
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((3072, 0), (3072, 256), (3072,), (3072,), (3072, 2048), (3072, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   27
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "b82de18b3ad6f5a0",
+   "nt": 50,
+   "ra": "091372d51beb9e32",
+   "us": 97.326,
+   "us2": 97.378,
+   "w": 16,
+   "agree": 14,
+   "wspread": 0.0138
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((32, 0), (32, 256), (32,), (32,), (32, 2048), (32, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   8,
+   368
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 51.944,
+   "us2": 51.987,
+   "w": 16,
+   "agree": 1,
+   "wspread": 0.0668
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((32768, 0), (32768, 256), (32768,), (32768,), (32768, 2048), (32768, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   23
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "4fe994b5c319940a",
+   "nt": 34,
+   "ra": "091372d51beb9e32",
+   "us": 517.901,
+   "us2": 518.29,
+   "w": 16,
+   "agree": 14,
+   "wspread": 0.0063
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((3584, 0), (3584, 256), (3584,), (3584,), (3584, 2048), (3584, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   27
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "b82de18b3ad6f5a0",
+   "nt": 50,
+   "ra": "091372d51beb9e32",
+   "us": 101.334,
+   "us2": 101.451,
+   "w": 16,
+   "agree": 11,
+   "wspread": 0.0081
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((4, 0), (4, 256), (4,), (4,), (4, 2048), (4, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   8,
+   396
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 18.709,
+   "us2": 18.755,
+   "w": 16,
+   "agree": 10,
+   "wspread": 0.0328
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((4096, 0), (4096, 256), (4096,), (4096,), (4096, 2048), (4096, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   24
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "b82de18b3ad6f5a0",
+   "nt": 50,
+   "ra": "091372d51beb9e32",
+   "us": 117.818,
+   "us2": 117.835,
+   "w": 16,
+   "agree": 7,
+   "wspread": 0.0349
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((512, 0), (512, 256), (512,), (512,), (512, 2048), (512, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   32,
+   568
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "c89b3a6de4d3b1d0",
+   "nt": 1736,
+   "ra": "091372d51beb9e32",
+   "us": 81.634,
+   "us2": 81.653,
+   "w": 16,
+   "agree": 4,
+   "wspread": 0.0159
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((64, 0), (64, 256), (64,), (64,), (64, 2048), (64, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   8,
+   126
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 66.917,
+   "us2": 66.936,
+   "w": 16,
+   "agree": 1,
+   "wspread": 0.0257
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((768, 0), (768, 256), (768,), (768,), (768, 2048), (768, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   32,
+   254
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "9787633c1cf2a666",
+   "nt": 1408,
+   "ra": "091372d51beb9e32",
+   "us": 82.515,
+   "us2": 82.522,
+   "w": 16,
+   "agree": 1,
+   "wspread": 0.0176
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((8, 0), (8, 256), (8,), (8,), (8, 2048), (8, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   8,
+   199
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "a7da24ce10b867f6",
+   "nt": 1720,
+   "ra": "091372d51beb9e32",
+   "us": 26.493,
+   "us2": 26.541,
+   "w": 16,
+   "agree": 8,
+   "wspread": 0.068
+  }
+ ],
+ "('flashinfer::trtllm_fp8_block_scale_moe', 'MoERunner', ((8192, 0), (8192, 256), (8192,), (8192,), (8192, 2048), (8192, 64), (0,), (0,)), ())": [
+  "MoERunner",
+  [
+   128,
+   20
+  ],
+  {
+   "g": "flashinfer::trtllm_fp8_block_scale_moe|MoERunner|91dd1279085e0f4a",
+   "tl": "4fe994b5c319940a",
+   "nt": 34,
+   "ra": "091372d51beb9e32",
+   "us": 177.102,
+   "us2": 177.106,
+   "w": 16,
+   "agree": 10,
+   "wspread": 0.0086
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2a30ac2ec8581302",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 2.902,
+   "us2": 3.168,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.006
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    16
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0f114a4760001004",
+   "nt": 172,
+   "ra": "44136fa355b3678a",
+   "us": 4.827,
+   "us2": 4.866,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0454
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2a30ac2ec8581302",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 41.394,
+   "us2": 41.75,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0093
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f42b02f4e5b70cc0",
+   "nt": 172,
+   "ra": "44136fa355b3678a",
+   "us": 4.341,
+   "us2": 4.493,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0074
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "14204e0beed36cf2",
+   "nt": 137,
+   "ra": "44136fa355b3678a",
+   "us": 3.574,
+   "us2": 4.352,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0096
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "14204e0beed36cf2",
+   "nt": 137,
+   "ra": "44136fa355b3678a",
+   "us": 2.541,
+   "us2": 2.558,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0109
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "63891b3ab6fcaaee",
+   "nt": 139,
+   "ra": "44136fa355b3678a",
+   "us": 4.221,
+   "us2": 4.244,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0402
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c70dd9eb81a4fbde",
+   "nt": 132,
+   "ra": "44136fa355b3678a",
+   "us": 12.644,
+   "us2": 12.739,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0543
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b5bc27269f6b1ea1",
+   "nt": 138,
+   "ra": "44136fa355b3678a",
+   "us": 10.514,
+   "us2": 11.304,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0834
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "111adc5a988a74bd",
+   "nt": 153,
+   "ra": "44136fa355b3678a",
+   "us": 6.849,
+   "us2": 6.866,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1318
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1024, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    128
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "111adc5a988a74bd",
+   "nt": 153,
+   "ra": "44136fa355b3678a",
+   "us": 3.022,
+   "us2": 3.058,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0172
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2e1720eab93125d1",
+   "nt": 124,
+   "ra": "44136fa355b3678a",
+   "us": 3.402,
+   "us2": 3.441,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0706
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "87a6534173a1ff00",
+   "nt": 165,
+   "ra": "44136fa355b3678a",
+   "us": 5.295,
+   "us2": 5.374,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1274
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 45.688,
+   "us2": 49.254,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.016
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0382c3e468e04846",
+   "nt": 165,
+   "ra": "44136fa355b3678a",
+   "us": 4.84,
+   "us2": 4.957,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0692
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "500b22a8f54ab024",
+   "nt": 130,
+   "ra": "44136fa355b3678a",
+   "us": 4.567,
+   "us2": 4.907,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0431
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((128, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "500b22a8f54ab024",
+   "nt": 130,
+   "ra": "44136fa355b3678a",
+   "us": 2.566,
+   "us2": 2.675,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0027
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 4.274,
+   "us2": 4.284,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.0806
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 15.332,
+   "us2": 15.388,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0485
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    2
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "46ac844b6d430ea8",
+   "nt": 122,
+   "ra": "44136fa355b3678a",
+   "us": 11.958,
+   "us2": 12.134,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0776
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "7d4218e685885c46",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 7.082,
+   "us2": 7.085,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0897
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1280, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    128
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "7d4218e685885c46",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 3.1,
+   "us2": 3.131,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.024
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 4.343,
+   "us2": 4.362,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0884
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 18.014,
+   "us2": 18.079,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0467
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 14.142,
+   "us2": 14.265,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0785
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "7d4218e685885c46",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 7.235,
+   "us2": 7.495,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1647
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1536, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    128
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "7d4218e685885c46",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 3.17,
+   "us2": 3.17,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0335
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    16
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2b7b64413b35521c",
+   "nt": 128,
+   "ra": "44136fa355b3678a",
+   "us": 2.847,
+   "us2": 3.106,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0059
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    16
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b2b29fad7d09aaa7",
+   "nt": 169,
+   "ra": "44136fa355b3678a",
+   "us": 4.842,
+   "us2": 4.848,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.0158
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2b7b64413b35521c",
+   "nt": 128,
+   "ra": "44136fa355b3678a",
+   "us": 41.997,
+   "us2": 42.099,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.0042
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    16
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "8f45affd4f4b9031",
+   "nt": 169,
+   "ra": "44136fa355b3678a",
+   "us": 4.314,
+   "us2": 4.407,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0057
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    16
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "de844f3e57a7184e",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 3.52,
+   "us2": 4.245,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0095
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "de844f3e57a7184e",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.531,
+   "us2": 2.561,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0119
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 15.862,
+   "us2": 15.971,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0488
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 132.813,
+   "us2": 136.019,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0367
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 103.12,
+   "us2": 104.818,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0214
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 48.411,
+   "us2": 49.499,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0289
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((16384, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 12.331,
+   "us2": 12.426,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0776
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c00447996e2ad317",
+   "nt": 153,
+   "ra": "44136fa355b3678a",
+   "us": 4.658,
+   "us2": 4.768,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1218
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 18.802,
+   "us2": 19.796,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.023
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 15.301,
+   "us2": 15.398,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0229
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "113b82b80e02976d",
+   "nt": 168,
+   "ra": "44136fa355b3678a",
+   "us": 8.941,
+   "us2": 9.035,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1677
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((1792, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    192
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "113b82b80e02976d",
+   "nt": 168,
+   "ra": "44136fa355b3678a",
+   "us": 3.454,
+   "us2": 3.544,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0951
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2a30ac2ec8581302",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 2.898,
+   "us2": 3.161,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.007
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0f114a4760001004",
+   "nt": 172,
+   "ra": "44136fa355b3678a",
+   "us": 4.731,
+   "us2": 4.919,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0125
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2a30ac2ec8581302",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 41.424,
+   "us2": 41.691,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0123
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f42b02f4e5b70cc0",
+   "nt": 172,
+   "ra": "44136fa355b3678a",
+   "us": 4.317,
+   "us2": 4.451,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0096
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "14204e0beed36cf2",
+   "nt": 137,
+   "ra": "44136fa355b3678a",
+   "us": 3.564,
+   "us2": 4.304,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0083
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "14204e0beed36cf2",
+   "nt": 137,
+   "ra": "44136fa355b3678a",
+   "us": 2.538,
+   "us2": 2.559,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0082
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c00447996e2ad317",
+   "nt": 153,
+   "ra": "44136fa355b3678a",
+   "us": 4.754,
+   "us2": 4.777,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.1266
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 21.451,
+   "us2": 21.54,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.018
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 17.515,
+   "us2": 17.52,
+   "w": 8,
+   "agree": 3,
+   "wspread": 0.0419
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    4,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "113b82b80e02976d",
+   "nt": 168,
+   "ra": "44136fa355b3678a",
+   "us": 8.992,
+   "us2": 9.005,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0893
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2048, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    192
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "113b82b80e02976d",
+   "nt": 168,
+   "ra": "44136fa355b3678a",
+   "us": 3.489,
+   "us2": 3.602,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0788
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2e1720eab93125d1",
+   "nt": 124,
+   "ra": "44136fa355b3678a",
+   "us": 3.455,
+   "us2": 3.812,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0726
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "a54ed01e09cd5ea4",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 5.881,
+   "us2": 6.068,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.1666
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "9974816d42c10547",
+   "nt": 168,
+   "ra": "44136fa355b3678a",
+   "us": 5.511,
+   "us2": 5.535,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.1298
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   128,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "9916be713061b0ec",
+   "nt": 129,
+   "ra": "44136fa355b3678a",
+   "us": 5.439,
+   "us2": 5.454,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1193
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((256, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "9916be713061b0ec",
+   "nt": 129,
+   "ra": "44136fa355b3678a",
+   "us": 2.611,
+   "us2": 2.656,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0239
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "d23bc0623bed51a1",
+   "nt": 168,
+   "ra": "44136fa355b3678a",
+   "us": 4.92,
+   "us2": 4.945,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.1476
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    4,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 25.342,
+   "us2": 25.424,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.021
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    4,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 19.854,
+   "us2": 19.959,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0171
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "8b784a9c53f9c8a7",
+   "nt": 162,
+   "ra": "44136fa355b3678a",
+   "us": 11.005,
+   "us2": 11.03,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1817
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((2560, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    4,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "8b784a9c53f9c8a7",
+   "nt": 162,
+   "ra": "44136fa355b3678a",
+   "us": 3.808,
+   "us2": 3.825,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0626
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((272, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2e1720eab93125d1",
+   "nt": 124,
+   "ra": "44136fa355b3678a",
+   "us": 3.595,
+   "us2": 3.919,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0585
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((272, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "3468b0ffd718c624",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 6.774,
+   "us2": 7.031,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1817
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((272, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "a990e2b47363ad1f",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 6.443,
+   "us2": 6.492,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1256
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((272, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 5.682,
+   "us2": 5.727,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0957
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((272, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.638,
+   "us2": 2.706,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0246
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((288, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2e1720eab93125d1",
+   "nt": 124,
+   "ra": "44136fa355b3678a",
+   "us": 3.595,
+   "us2": 3.921,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0566
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((288, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "3468b0ffd718c624",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 6.861,
+   "us2": 7.093,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1815
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((288, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "a990e2b47363ad1f",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 6.522,
+   "us2": 6.532,
+   "w": 8,
+   "agree": 3,
+   "wspread": 0.1105
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((288, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 5.688,
+   "us2": 5.729,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0899
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((288, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.642,
+   "us2": 2.703,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0214
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((304, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2e1720eab93125d1",
+   "nt": 124,
+   "ra": "44136fa355b3678a",
+   "us": 3.583,
+   "us2": 3.919,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0651
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((304, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "3468b0ffd718c624",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 6.896,
+   "us2": 7.087,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1802
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((304, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "a990e2b47363ad1f",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 6.528,
+   "us2": 6.55,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.2068
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((304, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 5.668,
+   "us2": 5.751,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0994
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((304, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.636,
+   "us2": 2.709,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0254
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "d23bc0623bed51a1",
+   "nt": 168,
+   "ra": "44136fa355b3678a",
+   "us": 5.026,
+   "us2": 5.079,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.2273
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 29.899,
+   "us2": 30.694,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0193
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 23.669,
+   "us2": 23.782,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.0434
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "8b784a9c53f9c8a7",
+   "nt": 162,
+   "ra": "44136fa355b3678a",
+   "us": 11.009,
+   "us2": 11.173,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0975
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3072, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    128
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "8b784a9c53f9c8a7",
+   "nt": 162,
+   "ra": "44136fa355b3678a",
+   "us": 3.95,
+   "us2": 3.971,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0957
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "adfcb3218379fd26",
+   "nt": 125,
+   "ra": "44136fa355b3678a",
+   "us": 3.221,
+   "us2": 3.581,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0093
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "a444e4835c44d4bf",
+   "nt": 166,
+   "ra": "44136fa355b3678a",
+   "us": 5.009,
+   "us2": 5.05,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0113
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "adfcb3218379fd26",
+   "nt": 125,
+   "ra": "44136fa355b3678a",
+   "us": 42.846,
+   "us2": 42.979,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0044
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0547b95f7b47f30c",
+   "nt": 166,
+   "ra": "44136fa355b3678a",
+   "us": 4.527,
+   "us2": 4.566,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0104
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "6e70c41251f1929a",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 4.308,
+   "us2": 4.893,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0356
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "6e70c41251f1929a",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 2.542,
+   "us2": 2.66,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.01
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((320, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2e1720eab93125d1",
+   "nt": 124,
+   "ra": "44136fa355b3678a",
+   "us": 3.59,
+   "us2": 3.921,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0599
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((320, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "3468b0ffd718c624",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 6.91,
+   "us2": 7.175,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1799
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((320, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "a990e2b47363ad1f",
+   "nt": 171,
+   "ra": "44136fa355b3678a",
+   "us": 6.492,
+   "us2": 6.501,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.1328
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((320, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 5.685,
+   "us2": 5.771,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((320, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.64,
+   "us2": 2.712,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.025
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 27.374,
+   "us2": 27.642,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.02
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 261.653,
+   "us2": 273.117,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0333
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 202.304,
+   "us2": 204.478,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0291
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 89.274,
+   "us2": 90.416,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1046
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((32768, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    2
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 21.0,
+   "us2": 21.144,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0524
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((336, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.642,
+   "us2": 3.921,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0401
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((336, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "3468b0ffd718c624",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 6.885,
+   "us2": 6.999,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1781
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((336, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0451f0b2104f398c",
+   "nt": 169,
+   "ra": "44136fa355b3678a",
+   "us": 6.521,
+   "us2": 6.531,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1258
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((336, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   128,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 5.718,
+   "us2": 5.941,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1388
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((336, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.7,
+   "us2": 2.72,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0223
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((352, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.646,
+   "us2": 3.919,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0412
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((352, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "3468b0ffd718c624",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 6.898,
+   "us2": 7.101,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1895
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((352, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0451f0b2104f398c",
+   "nt": 169,
+   "ra": "44136fa355b3678a",
+   "us": 6.533,
+   "us2": 6.587,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.1421
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((352, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   128,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 5.777,
+   "us2": 5.913,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1351
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((352, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.704,
+   "us2": 2.722,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0254
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "835df634b6f854de",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.004,
+   "us2": 6.03,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.1888
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 34.21,
+   "us2": 34.658,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.033
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 26.939,
+   "us2": 27.302,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0143
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    4,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "72e7fb42619897c4",
+   "nt": 144,
+   "ra": "44136fa355b3678a",
+   "us": 14.474,
+   "us2": 14.544,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0828
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((3584, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "72e7fb42619897c4",
+   "nt": 144,
+   "ra": "44136fa355b3678a",
+   "us": 4.333,
+   "us2": 4.397,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.1073
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((368, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.648,
+   "us2": 3.919,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0413
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((368, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "3468b0ffd718c624",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 6.879,
+   "us2": 7.215,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1922
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((368, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0451f0b2104f398c",
+   "nt": 169,
+   "ra": "44136fa355b3678a",
+   "us": 6.558,
+   "us2": 6.591,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1455
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((368, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   128,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 5.826,
+   "us2": 5.945,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1415
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((368, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.703,
+   "us2": 2.722,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0296
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((384, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.627,
+   "us2": 3.922,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.044
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((384, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "3468b0ffd718c624",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 6.938,
+   "us2": 7.007,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1944
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((384, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0451f0b2104f398c",
+   "nt": 169,
+   "ra": "44136fa355b3678a",
+   "us": 6.543,
+   "us2": 6.551,
+   "w": 8,
+   "agree": 2,
+   "wspread": 0.2434
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((384, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   128,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 5.725,
+   "us2": 5.938,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.149
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((384, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f61bef0abb6c0467",
+   "nt": 134,
+   "ra": "44136fa355b3678a",
+   "us": 2.704,
+   "us2": 2.717,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.0319
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2a30ac2ec8581302",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 2.899,
+   "us2": 3.16,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0073
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0f114a4760001004",
+   "nt": 172,
+   "ra": "44136fa355b3678a",
+   "us": 4.821,
+   "us2": 4.864,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0117
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2a30ac2ec8581302",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 41.656,
+   "us2": 41.859,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0102
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f42b02f4e5b70cc0",
+   "nt": 172,
+   "ra": "44136fa355b3678a",
+   "us": 4.318,
+   "us2": 4.441,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0092
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "14204e0beed36cf2",
+   "nt": 137,
+   "ra": "44136fa355b3678a",
+   "us": 3.554,
+   "us2": 4.35,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0081
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "14204e0beed36cf2",
+   "nt": 137,
+   "ra": "44136fa355b3678a",
+   "us": 2.535,
+   "us2": 2.556,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0131
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((400, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.741,
+   "us2": 3.963,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0308
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((400, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c2866854b3730b26",
+   "nt": 158,
+   "ra": "44136fa355b3678a",
+   "us": 7.89,
+   "us2": 8.02,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.1463
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((400, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c76d66b7a3cb7d01",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.691,
+   "us2": 7.054,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.166
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((400, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 5.928,
+   "us2": 5.951,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0201
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((400, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 2.74,
+   "us2": 2.779,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0147
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "835df634b6f854de",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.089,
+   "us2": 6.15,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1663
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 38.477,
+   "us2": 39.13,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0311
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 30.075,
+   "us2": 30.315,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0244
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "72e7fb42619897c4",
+   "nt": 144,
+   "ra": "44136fa355b3678a",
+   "us": 14.613,
+   "us2": 14.625,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0357
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((4096, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "72e7fb42619897c4",
+   "nt": 144,
+   "ra": "44136fa355b3678a",
+   "us": 4.61,
+   "us2": 4.612,
+   "w": 8,
+   "agree": 1,
+   "wspread": 0.1803
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((416, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.739,
+   "us2": 3.954,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0333
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((416, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c2866854b3730b26",
+   "nt": 158,
+   "ra": "44136fa355b3678a",
+   "us": 7.851,
+   "us2": 7.977,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.1442
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((416, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c76d66b7a3cb7d01",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.661,
+   "us2": 7.056,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1741
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((416, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 5.925,
+   "us2": 5.987,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.0281
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((416, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 2.738,
+   "us2": 2.767,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0131
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((432, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.737,
+   "us2": 3.96,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0292
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((432, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c2866854b3730b26",
+   "nt": 158,
+   "ra": "44136fa355b3678a",
+   "us": 7.922,
+   "us2": 8.022,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.1408
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((432, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c76d66b7a3cb7d01",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.721,
+   "us2": 7.083,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1652
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((432, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 5.954,
+   "us2": 5.968,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0287
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((432, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 2.74,
+   "us2": 2.762,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0143
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((448, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.742,
+   "us2": 3.958,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0316
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((448, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c2866854b3730b26",
+   "nt": 158,
+   "ra": "44136fa355b3678a",
+   "us": 7.909,
+   "us2": 7.996,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.145
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((448, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c76d66b7a3cb7d01",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.656,
+   "us2": 7.143,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1711
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((448, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 5.971,
+   "us2": 5.986,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0294
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((448, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 2.739,
+   "us2": 2.755,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0132
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((464, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.844,
+   "us2": 3.958,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.024
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((464, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c2866854b3730b26",
+   "nt": 158,
+   "ra": "44136fa355b3678a",
+   "us": 7.953,
+   "us2": 8.042,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1436
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((464, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c76d66b7a3cb7d01",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.674,
+   "us2": 7.087,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1684
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((464, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 5.948,
+   "us2": 5.971,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.033
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((464, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 2.754,
+   "us2": 2.755,
+   "w": 8,
+   "agree": 3,
+   "wspread": 0.0084
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((480, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.849,
+   "us2": 3.951,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0283
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((480, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c2866854b3730b26",
+   "nt": 158,
+   "ra": "44136fa355b3678a",
+   "us": 7.974,
+   "us2": 8.07,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.142
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((480, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c76d66b7a3cb7d01",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.704,
+   "us2": 7.113,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1676
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((480, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 5.936,
+   "us2": 6.001,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.04
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((480, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 2.757,
+   "us2": 2.76,
+   "w": 8,
+   "agree": 3,
+   "wspread": 0.012
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((496, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.847,
+   "us2": 3.955,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0297
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((496, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c2866854b3730b26",
+   "nt": 158,
+   "ra": "44136fa355b3678a",
+   "us": 8.014,
+   "us2": 8.062,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.141
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((496, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c76d66b7a3cb7d01",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.694,
+   "us2": 7.114,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1701
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((496, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 5.964,
+   "us2": 5.973,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.022
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((496, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 2.756,
+   "us2": 2.76,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.0072
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5e8a70847281ad8d",
+   "nt": 123,
+   "ra": "44136fa355b3678a",
+   "us": 3.852,
+   "us2": 3.956,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0326
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c2866854b3730b26",
+   "nt": 158,
+   "ra": "44136fa355b3678a",
+   "us": 8.047,
+   "us2": 8.199,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.1251
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "c76d66b7a3cb7d01",
+   "nt": 167,
+   "ra": "44136fa355b3678a",
+   "us": 6.745,
+   "us2": 7.096,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1699
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 6.013,
+   "us2": 6.037,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0347
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((512, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "b3baaa7469abad16",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 2.766,
+   "us2": 2.768,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0171
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2e1720eab93125d1",
+   "nt": 124,
+   "ra": "44136fa355b3678a",
+   "us": 3.282,
+   "us2": 3.345,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0061
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "5942a9a82b2abf23",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 5.226,
+   "us2": 5.264,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.0292
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 43.334,
+   "us2": 44.25,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0067
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "e5310677db26807a",
+   "nt": 163,
+   "ra": "44136fa355b3678a",
+   "us": 4.629,
+   "us2": 4.867,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0508
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "500b22a8f54ab024",
+   "nt": 130,
+   "ra": "44136fa355b3678a",
+   "us": 4.01,
+   "us2": 4.692,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0131
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((64, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "500b22a8f54ab024",
+   "nt": 130,
+   "ra": "44136fa355b3678a",
+   "us": 2.578,
+   "us2": 2.66,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.01
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   1072,
+   64,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "fd74991f176d8031",
+   "nt": 125,
+   "ra": "44136fa355b3678a",
+   "us": 4.086,
+   "us2": 4.119,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0595
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "4d81f0281973ea0a",
+   "nt": 138,
+   "ra": "44136fa355b3678a",
+   "us": 11.098,
+   "us2": 11.115,
+   "w": 8,
+   "agree": 1,
+   "wspread": 0.0878
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "72e7fb42619897c4",
+   "nt": 144,
+   "ra": "44136fa355b3678a",
+   "us": 9.215,
+   "us2": 9.248,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.1344
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    64
+   ],
+   [
+    2,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "daa800b496c94e27",
+   "nt": 148,
+   "ra": "44136fa355b3678a",
+   "us": 6.187,
+   "us2": 6.388,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1891
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((768, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    64
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "daa800b496c94e27",
+   "nt": 148,
+   "ra": "44136fa355b3678a",
+   "us": 2.819,
+   "us2": 2.928,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0564
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2a30ac2ec8581302",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 2.886,
+   "us2": 3.162,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0051
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "0f114a4760001004",
+   "nt": 172,
+   "ra": "44136fa355b3678a",
+   "us": 4.775,
+   "us2": 4.819,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0077
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 2048), (2048, 248320), (-1,), (15892480,), (0,), (-1, 248320), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    4,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "2a30ac2ec8581302",
+   "nt": 131,
+   "ra": "44136fa355b3678a",
+   "us": 41.629,
+   "us2": 42.011,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0092
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   2
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "f42b02f4e5b70cc0",
+   "nt": 172,
+   "ra": "44136fa355b3678a",
+   "us": 4.344,
+   "us2": 4.436,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0082
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    8
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   4
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "14204e0beed36cf2",
+   "nt": 137,
+   "ra": "44136fa355b3678a",
+   "us": 3.585,
+   "us2": 4.333,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0091
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    128,
+    32
+   ],
+   [
+    1,
+    1
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "14204e0beed36cf2",
+   "nt": 137,
+   "ra": "44136fa355b3678a",
+   "us": 2.535,
+   "us2": 2.561,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0118
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 2048), (2048, 1024), (-1,), (65536,), (0,), (-1, 1024), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    2
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "46aaec8cdca0a45c",
+   "nt": 142,
+   "ra": "44136fa355b3678a",
+   "us": 8.959,
+   "us2": 8.989,
+   "w": 8,
+   "agree": 7,
+   "wspread": 0.1353
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 2048), (2048, 12288), (-1,), (786432,), (0,), (-1, 12288), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 70.848,
+   "us2": 72.096,
+   "w": 8,
+   "agree": 4,
+   "wspread": 0.092
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 2048), (2048, 9216), (-1,), (589824,), (0,), (-1, 9216), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 53.882,
+   "us2": 54.373,
+   "w": 8,
+   "agree": 5,
+   "wspread": 0.0207
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 4096), (4096, 2048), (-1,), (262144,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    192
+   ],
+   [
+    2,
+    4
+   ],
+   true,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 26.611,
+   "us2": 26.675,
+   "w": 8,
+   "agree": 8,
+   "wspread": 0.0139
+  }
+ ],
+ "('mxfp8_gemm', 'CuteDSLMxfp8GemmRunner', ((8192, 512), (512, 2048), (-1,), (32768,), (0,), (-1, 2048), (33554432,)), ('torch.bfloat16', True))": [
+  "CuteDSLMxfp8GemmRunner",
+  [
+   [
+    256,
+    256
+   ],
+   [
+    2,
+    1
+   ],
+   false,
+   false,
+   1
+  ],
+  {
+   "g": "mxfp8_gemm|CuteDSLMxfp8GemmRunner|e77157ad17a0f7ed",
+   "tl": "39c89b7d0fce313c",
+   "nt": 120,
+   "ra": "44136fa355b3678a",
+   "us": 6.626,
+   "us2": 6.783,
+   "w": 8,
+   "agree": 6,
+   "wspread": 0.1804
+  }
+ ],
+ "_generation": "b326aec9e5299002b6e1a160686a0552966bc8977dd0f9a3dbfa502d9457b701"
+}

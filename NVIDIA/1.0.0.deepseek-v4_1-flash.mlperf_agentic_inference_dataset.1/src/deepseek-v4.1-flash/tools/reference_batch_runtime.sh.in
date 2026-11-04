@@ -1,0 +1,99 @@
+# Bootstrap and finalize from the archived b8afb5b launch wrapper.
+set -x
+
+# sbatch's default --export=ALL leaks the submitter's env into the job.
+# Drop VIRTUAL_ENV/PATH (a caller venv may be the wrong arch -> 'Exec format
+# error') and PYTHONPATH (an sflow src tree on it would shadow the per-job
+# editable install), so the job uses only its fresh per-job venv.
+if [ -n "${VIRTUAL_ENV:-}" ]; then
+    PATH=$(printf '%s' "$PATH" | tr ':' '\n' | grep -vxF "$VIRTUAL_ENV/bin" | paste -sd ':' -)
+    export PATH
+fi
+unset VIRTUAL_ENV VIRTUAL_ENV_PROMPT PYTHONHOME PYTHONPATH
+
+SFLOW_VENV_PARENT="${TMPDIR:-/tmp}/sflow_compute_node_venv"
+mkdir -p "$SFLOW_VENV_PARENT"
+
+# Fresh per-job venv keyed on the Slurm job id (PID fallback off-Slurm),
+# so concurrent jobs never collide -- no shared venv, no flock.
+SFLOW_VENV_DIR="$SFLOW_VENV_PARENT/.sflow_venv-${SLURM_JOB_ID:-$$}"
+
+# Run on exit AND on the signals Slurm uses for timeout/cancel/preempt
+# (a bare EXIT trap does not fire on an untrapped signal). It ALWAYS
+# copies the sbatch .out/.err and config(s) into the workflow output dir
+# -- using a <job id>-sflow-submit dir if the run never created one -- so
+# a failed bootstrap or run still leaves a full debug picture, then
+# removes the disposable per-job venv/source copy.
+_sflow_finalize() {
+    # Best-effort: capture the incoming rc FIRST (before any other command
+    # changes $?), then disarm all traps so a signal arriving mid-cleanup --
+    # or the EXIT trap firing after a signal-triggered run -- cannot re-enter
+    # this handler. Then disable errexit and guard every step so a failed
+    # copy/cleanup never changes the job's exit status.
+    _sflow_rc=$?
+    trap - EXIT INT TERM HUP
+    set +e
+    SBATCH_OUT_PATTERN=@SBATCH_OUT@
+    SBATCH_ERR_PATTERN=@SBATCH_ERR@
+    SBATCH_OUT="${SBATCH_OUT_PATTERN//%j/$SLURM_JOB_ID}"
+    SBATCH_ERR="${SBATCH_ERR_PATTERN//%j/$SLURM_JOB_ID}"
+    SFLOW_WF_DIR=$(find @OUTPUT_DIR@ -maxdepth 1 -type d -name "${SLURM_JOB_ID}-*" 2>/dev/null | head -1)
+    [ -n "$SFLOW_WF_DIR" ] || SFLOW_WF_DIR=@OUTPUT_DIR@/"${SLURM_JOB_ID}-sflow-submit"
+    mkdir -p "$SFLOW_WF_DIR" 2>/dev/null || true
+    cp "$SBATCH_OUT" "$SFLOW_WF_DIR/" 2>/dev/null || true
+    cp "$SBATCH_ERR" "$SFLOW_WF_DIR/" 2>/dev/null || true
+    cp @INPUT_SLURM@ "$SFLOW_WF_DIR/" 2>/dev/null || true
+    cp @INPUT_WORKFLOW@ "$SFLOW_WF_DIR/" 2>/dev/null || true
+    cp @INPUT_POINT@ "$SFLOW_WF_DIR/" 2>/dev/null || true
+    rm -rf "$SFLOW_VENV_DIR" ${SFLOW_SRC_DIR:+"$SFLOW_SRC_DIR"} 2>/dev/null || true
+    # exit (not return): on a trapped signal this terminates the job instead
+    # of resuming the interrupted bootstrap/run; traps are disarmed above so
+    # this exit cannot re-enter the handler.
+    exit "$_sflow_rc"
+}
+trap _sflow_finalize EXIT INT TERM HUP
+
+# Fail fast during bootstrap so we never run sflow from a half-built venv;
+# re-disabled once ready so post-run steps (e.g. log copy) still execute.
+set -e
+
+# GB300 checks the checkpoint index and installs native ARM64 service
+# wheels inside the allocation. VR uses its separately provisioned recipe-local
+# service. All paths are frozen from this checkout and its selected storage root.
+export RECIPE_DIR=@RECIPE_DIR@
+if [[ ${RECIPE_DIR##*/} == GB300-* ]]; then
+    test -f @MODEL_CHECKPOINT_INDEX@
+    export MODEL_DIR=@MODEL_DIR@
+    bash @SERVICE_SETUP_SCRIPT@ > @SERVICE_SETUP_LOG@ 2>&1
+fi
+
+# Resolve a real system python3 for venv creation: well-known absolute
+# locations first, then PATH (already cleaned of the caller venv).
+SFLOW_BOOTSTRAP_PYTHON=""
+for _candidate in /usr/bin/python3 /usr/local/bin/python3 "$(command -v python3 || true)"; do
+    if [ -n "$_candidate" ] && [ -x "$_candidate" ]; then
+        SFLOW_BOOTSTRAP_PYTHON="$_candidate"
+        break
+    fi
+done
+if [ -z "$SFLOW_BOOTSTRAP_PYTHON" ]; then
+    echo "ERROR: could not locate a system python3 to bootstrap the sflow venv" >&2
+    exit 1
+fi
+
+# Create the fresh per-job venv and install sflow into it.
+"$SFLOW_BOOTSTRAP_PYTHON" -m venv "$SFLOW_VENV_DIR"
+source "$SFLOW_VENV_DIR/bin/activate"
+"$VIRTUAL_ENV/bin/pip" install uv
+"$VIRTUAL_ENV/bin/uv" pip install 'sflow @ git+https://github.com/NVIDIA/nv-sflow.git@@SFLOW_VERSION@' --prerelease=allow
+"$VIRTUAL_ENV/bin/sflow" --help
+set +e
+
+cd @WORKSPACE_DIR@
+
+export SFLOW_RUN_ID_PREFIX="$SLURM_JOB_ID"
+
+# Run the frozen merged workflow, retaining its status through finalization.
+"$SFLOW_VENV_DIR/bin/sflow" run --file @MERGED_YAML@ --workspace-dir @WORKSPACE_DIR@ --output-dir @OUTPUT_DIR@
+SFLOW_RUN_RC=$?
+exit "$SFLOW_RUN_RC"

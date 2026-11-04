@@ -1,0 +1,45 @@
+variables:
+  TOTAL_GPUS:
+    type: integer
+    value: 4
+  NUM_WORKERS:
+    type: integer
+    value: 4
+  VLLM_ARGS:
+    value: --discovery-backend file --request-plane tcp --event-plane zmq --dyn-tool-call-parser deepseek_v41 --dyn-reasoning-parser
+      deepseek_v41 --model ${{ variables.MODEL_PATH }} --served-model-name deepseek-ai/DeepSeek-V4.1-Flash --tokenizer-mode
+      deepseek_v41 --language-model-only --enable-logging-iteration-details --tensor-parallel-size 1 --enable-expert-parallel
+      --attention-config '{"backend":"FLASHMLA_MEGA_ATTN_DSV41","indexer_kv_dtype":"mxfp4","indexer_sparse_logits":true}'
+      --kv-cache-dtype fp8_ds_mla --engram-config '{"cpu_offload":true,"embedding_across_dp":true,"dp_shared_memory":false,"use_thp":true}'
+      --kernel-config '{"moe_backend":"deep_gemm_mega_moe"}' --compilation-config '{"mode":"VLLM_COMPILE","cudagraph_mode":"FULL_AND_PIECEWISE","cudagraph_capture_sizes":[6,12,18,24,30,36,48,60,72,96,120,144,192,240,288,384,480,576,768,1020,1260,1536]}'
+      --max-cudagraph-capture-size 1536 --max-num-batched-tokens 1536 --max-num-seqs 256 --data-parallel-size 4 --data-parallel-rank
+      "$SFLOW_REPLICA_INDEX" --data-parallel-address "$HEAD_NODE_IP" --data-parallel-rpc-port 29550 --speculative-config '{"method":"dspark","num_speculative_tokens":5,"draft_sample_method":"probabilistic","rejection_sample_method":"block","enable_adaptive_verification":true}'
+  VLLM_PORT:
+    type: integer
+    value: 8000
+  MODEL_PATH:
+    value: ${{ variables.SCRATCH_DIR }}/models/DeepSeek-V4.1-Flash
+  DATA_PATH:
+    value: ${{ variables.SCRATCH_DIR }}/data/agentic_dataset
+  CONCURRENCY:
+    type: integer
+    value: 256
+  DATASET_REPEATS:
+    type: integer
+    value: 6
+  NUM_TRAJECTORIES:
+    type: integer
+    value: ${{ variables.DATASET_REPEATS * 613 }}
+  SWEBENCH_TASKS:
+    type: integer
+    value: 200
+  MODE:
+    value: perf
+  ENDPOINT_CONFIG:
+    value: ${{ variables.RECIPE_DIR }}/point_256/client.yaml
+  ENDPOINT_ENV_YAML:
+    value: ${{ variables.RECIPE_DIR }}/point_256/endpoint_env.yaml
+  SERVER_ENV_YAML:
+    value: ${{ variables.RECIPE_DIR }}/point_256/server-env.yaml
+  DYNAMO_ENV_YAML:
+    value: ${{ variables.RECIPE_DIR }}/point_256/dynamo_env.yaml

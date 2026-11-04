@@ -1,0 +1,30 @@
+# Optional overlay for Slurm clusters without CPU nodes.
+#
+# Use it last in the sflow file list.  The server backend requests a second
+# node in the same Slurm job, so Slurm grants the server and client nodes
+# together or not at all.  Separate backends would queue the client allocation
+# only after the server job starts, leaving the server idle while it waits.
+# Changing client_cpu to local prevents SFlow from acquiring it.  Performance
+# and SWE-bench keep their normal client settings on the second node.
+version: '0.1'
+backends:
+  cluster:
+    nodes: 2
+  client_cpu:
+    type: local
+workflow:
+  tasks:
+  - name: serve_endpoint
+    resources:
+      nodes:
+        indices: [0]
+  - name: swe_service
+    backend: cluster
+    resources:
+      nodes:
+        indices: [1]
+  - name: benchmark_0
+    backend: cluster
+    resources:
+      nodes:
+        indices: [1]

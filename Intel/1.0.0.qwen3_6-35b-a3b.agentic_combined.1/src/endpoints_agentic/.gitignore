@@ -1,0 +1,17 @@
+# Generated runtime configuration.
+configs/generated/
+configs/*_runtime.yaml
+configs/*_runtime.yml
+
+# Local caches and Python build/runtime state.
+.cache/
+/cache/
+/run_output/
+__pycache__/
+*.py[cod]
+dataset_cache/
+
+# Benchmark and SWE-bench logs/artifacts.
+logs/
+swebench_service_artifacts/
+*.log

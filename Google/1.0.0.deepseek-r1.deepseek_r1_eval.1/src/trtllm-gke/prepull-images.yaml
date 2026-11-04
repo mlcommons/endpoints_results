@@ -1,0 +1,90 @@
+# Pre-pull the three run images onto every node of the A4X-max pool.
+#
+# WHY THIS EXISTS
+# ---------------
+# The TRT-LLM release image is a multi-GB arm64 manifest. A cold pull on 18
+# nodes at once is minutes of wall clock during which the server pods sit in
+# ContainerCreating -- and sflow's `reservation.timeout` (1800 s) and the
+# prefill/decode `log_watch` readiness probes (3600 s) are both counting during
+# that window. A cold pull can therefore fail the run before TRT-LLM has
+# executed a single line.
+#
+# More usefully, this is a real scheduling rehearsal. If an image is the wrong
+# architecture, the registry is unreachable from the nodes, or a node has no
+# disk headroom, it surfaces here as a clear ImagePullBackOff instead of inside
+# an 18-node reservation forty minutes in.
+#
+# ghcr.io in particular is often unreachable from GKE nodes. If `pull-client`
+# or `pull-lcb` sticks in ImagePullBackOff, mirror the image and update BOTH
+# this file and the recipe variable:
+#
+#   crane copy ghcr.io/mlcommons/endpoints:e9f427c \
+#     <registry>/<proj>/<repo>/endpoints-client:e9f427c
+#   ./point_256/launch_test.sh -s CLIENT_IMAGE=<registry>
+#
+#   kubectl apply -f prepull-images.yaml
+#   kubectl rollout status ds/prepull-dsr1-images --timeout=45m
+#   kubectl delete -f prepull-images.yaml
+#
+# The pods intentionally do nothing: `imagePullPolicy: IfNotPresent` plus a
+# trivial command means kubelet pulls the layers into the node's containerd
+# content store and then idles. Deleting the DaemonSet does NOT evict the
+# cached image -- only kubelet GC under disk pressure does, and these nodes
+# have ~11 TB of ephemeral storage.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: prepull-dsr1-images
+  labels:
+    app: prepull-dsr1-images
+spec:
+  selector:
+    matchLabels:
+      app: prepull-dsr1-images
+  template:
+    metadata:
+      labels:
+        app: prepull-dsr1-images
+    spec:
+      # Match the recipes' backend node_selector exactly, so the machines the
+      # run will land on are the ones being warmed.
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      # Init containers run to completion in order, so a node finishes the big
+      # TRT-LLM pull before starting on the client image. Sequencing them keeps
+      # a single node from saturating its own NIC with several multi-GB pulls
+      # at once.
+      initContainers:
+        # Keep in sync with TRTLLM_IMAGE in the point recipes. arm64 manifest
+        # sha256:e71eb8056ac1c717e6b727f9d66ebba9442e95f7ebc3514007b541046e84b088.
+        - name: pull-trtllm
+          image: nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc14
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "echo PULLED trtllm on $(uname -m)"]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+        # Keep in sync with LCB_IMAGE. Only needed when WITH_LCB=true (default)
+        # or for any accuracy run.
+        - name: pull-lcb
+          image: ghcr.io/mlcommons/endpoints:9d749906-livecodebench
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "echo PULLED lcb on $(uname -m)"]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      containers:
+        # Keep in sync with CLIENT_IMAGE.
+        - name: pull-client
+          image: ghcr.io/mlcommons/endpoints:e9f427c
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c", "echo PREPULL COMPLETE on $(uname -m); sleep infinity"]
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      terminationGracePeriodSeconds: 0

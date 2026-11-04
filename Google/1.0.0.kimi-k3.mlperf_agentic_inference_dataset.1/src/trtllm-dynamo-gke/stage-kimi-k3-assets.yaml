@@ -1,0 +1,687 @@
+# Stage the Kimi K3 v1.0.3 assets onto every node of the A4X-max pool.
+#
+# v1.0.3 (same checkpoints and dataset as v1.0.2): the server checkpoint is nvidia/Kimi-K3-NVFP4@b2428a0b
+# (NVIDIA/src/kimi-k3/README.md "Model and data"), 116 files, 1,610,039,528,856 B.
+# It is staged NEXT TO the v1.0.1 checkpoint, under its own DaemonSet/ConfigMap
+# names, so v1.0.1 recipes keep working. The DSpark draft and the dataset are
+# unchanged and keep their v1.0.1 node paths (v1.0.1-staged nodes do not re-copy):
+#
+#   MODEL_PATH      <node-local-ssd>/model-cache/Kimi-K3-NVFP4
+#   SGL_DRAFT_PATH  <node-local-ssd>/model-cache/Kimi-K3-DSpark
+#   DATASET_PATH    <node-local-ssd>/mlperf-data/mlperf_agentic_inference_dataset.jsonl
+#
+# The drop calls the dataset agentic_combined_v6.jsonl; v1.0.3 dataset/README.md
+# gives the same sha256 (1beb24c8...), so the v1.0.1 file is reused as is.
+#
+# Gates, in order. Each fails closed: no .sflow-staged marker, pod stays NotReady.
+#   1. ConfigMap values and the embedded manifests are validated before any disk access.
+#   2. The model copy starts only if the record stage_to_gcs.sh uploads LAST exists
+#      and states repo, revision, files=116, exact bytes, "VERIFIED 116/116 files,
+#      extra=0" and no VERIFY_ lines -- a bucket that is still filling is never mirrored.
+#   3. Source preflight: `gcloud storage du` of the prefix must list exactly the
+#      manifest's names and sizes (.cache/ ignored). This also guards the
+#      --delete-unmatched-destination-objects rsync against a wrong prefix.
+#   4. Free space: the copy must leave >= MIN_FREE_PCT_AFTER % of the disk free. The
+#      disk is also the kubelet's ephemeral storage and image store; above 85% used
+#      the kubelet garbage-collects unused images, prepulled server image first.
+#   5. After rsync the tree must equal the manifest: every file regular and of exact
+#      size, no extra files (.cache/, __pycache__/, .sflow-* ignored), exact count/bytes.
+#   6. VERIFY_SHA256=1: sha256 (LFS files) / git blob sha1 (small files) of every file,
+#      once per revision (cached in .sflow-sha256-verified). A same-size mismatch is
+#      deleted so the restage re-fetches it (rsync alone would skip it).
+#   7. Only then .sflow-staged := revision, written atomically. A recipe can assert
+#      [ "$(cat ${MODEL_PATH}/.sflow-staged)" = b2428a0b83a8b712ff2e1a8448a103d4175341f1 ].
+#
+#   kubectl apply -f stage-kimi-k3-assets.yaml
+#   kubectl rollout status ds/stage-kimi-k3-v3-assets --timeout=180m
+#   kubectl logs -l app=stage-kimi-k3-v3-assets --tail=8 --prefix | sort
+#   kubectl delete -f stage-kimi-k3-assets.yaml      # staged files persist
+#
+# Unlike v1.0.1, a pod is Ready only after `STAGED: node ready` (readiness probe on
+# /tmp/sflow-stage-ready): `rollout status` returns when every node is verified, and
+# a node printing `NOT READY` holds it until the timeout -- read that node's log.
+# Re-run after fixing a source or once the upload record lands (rsync resumes):
+#   kubectl rollout restart ds/stage-kimi-k3-v3-assets
+# Verify-only pass: set SRC_MODEL, SRC_DRAFT and SRC_DATASET to "".
+# Do not run it together with v1.0.1's stage-kimi-k3-assets (both write
+# Kimi-K3-DSpark), nor while a benchmark runs on the pool (copy and hashing load
+# each node's disk, NIC and CPU).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stage-kimi-k3-v3-assets-src
+  namespace: default
+data:
+  # nvidia/Kimi-K3-NVFP4 @ MODEL_REVISION, uploaded and hash-verified by
+  # v1.0.3/kimi-k3/stage_to_gcs.sh. Must end in /Kimi-K3-NVFP4.
+  SRC_MODEL: "<bucket>/models/Kimi-K3-NVFP4"
+  # The record stage_to_gcs.sh writes after upload + bucket count/bytes check.
+  # Same bucket as SRC_MODEL; must name the revision's first 8 hex chars.
+  SRC_MODEL_RECORD: "<bucket>/staging-logs/kimi-k3-nvfp4-b2428a0b.verified.txt"
+  # Minutes to poll for the record before failing (0 = fail at once). Set e.g.
+  # "240" to apply this while the upload is still running.
+  RECORD_WAIT_MIN: "0"
+  MODEL_REPO: "nvidia/Kimi-K3-NVFP4"
+  MODEL_REVISION: "b2428a0b83a8b712ff2e1a8448a103d4175341f1"
+  EXPECTED_MODEL_FILES: "116"
+  EXPECTED_MODEL_BYTES: "1610039528856"
+  # RadixArk/Kimi-K3-DSpark @ DRAFT_REVISION, unchanged since v1.0.1. The bucket
+  # objects equal the HF tree (7 files, 4,498,618,073 B) plus 1,848 B of .cache/.
+  SRC_DRAFT: "<bucket>/models/Kimi-K3-DSpark"
+  DRAFT_REVISION: "3c5bac301d9cf392706189d82ed947feca6c2f0f"
+  EXPECTED_DRAFT_FILES: "7"
+  EXPECTED_DRAFT_BYTES: "4498618073"
+  # <bucket> only: this image has no curl/wget and its python3 has no CA bundle.
+  SRC_DATASET: "<bucket>/mlperf-data/mlperf_agentic_inference_dataset.jsonl"
+  DATASET_SHA256: "1beb24c882122df96571cf11b390acbea388944038bc55c78b891475459014ae"
+  # "1": hash every file once per revision; "force": re-hash even if cached;
+  # "0": names, sizes, count and total bytes only.
+  VERIFY_SHA256: "1"
+  HASH_THREADS: "16"
+  MIN_FREE_PCT_AFTER: "15"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stage-kimi-k3-v3-assets-manifest
+  namespace: default
+data:
+  # nvidia/Kimi-K3-NVFP4 @ b2428a0b83a8b712ff2e1a8448a103d4175341f1 (HuggingFace
+  # tree API; the manifest stage_to_gcs.sh verifies against). One line per file:
+  # "<path> <size> sha256|gitsha1 <hex>"; gitsha1 = sha1("blob <size>\0" + data).
+  kimi-k3-nvfp4.manifest: |
+    .gitattributes 1639 gitsha1 62375aaf6f0f97fad2b39e33dbc99fee014c7d8d
+    LICENSE 3065 gitsha1 97c0111bba229b0981b1d74e34bacef723ca8f7b
+    README.md 13562 gitsha1 d1975910a012358c2299b9635f5ae9860e2d4bda
+    config.json 503645 gitsha1 0e4b41bbe8d1e6ca545853ec60f12601a84e5fe5
+    configuration_kimi_k3.py 11343 gitsha1 b38c4f8fcab1ce295aea236772ea1cba57f978c9
+    conversion_report.json 456 gitsha1 b00bb785683936d1e12309fdc3d27c3f3beb4849
+    encoding_k3.py 22827 gitsha1 44a56b7371fab32513da0eaed6b9a8a7c56499a2
+    generation_config.json 53 gitsha1 3908a4a5477122aa4b09386acab760fb7887c0fc
+    hf_quant_config.json 323769 gitsha1 11abf9cb49466348130d370b5d8870a99719e59f
+    kimi_k3_processor.py 7660 gitsha1 033a5773885c144509788e89a445217b76d6c046
+    kimi_k3_vision_processing.py 6686 gitsha1 58154424ff951289570c8fb5578e7372bfbfaa8b
+    media_utils.py 13844 gitsha1 e8b2ae127e254e364e6b568b1093a7e12ac576e0
+    model-00001-of-000096.safetensors 1897745088 sha256 7ee55b0ef0f312ffb202c0ae719a18511392fb2fe30a5d67f3a7c7cd98732d98
+    model-00002-of-000096.safetensors 17473009184 sha256 ebbc972966f12336aafaa1e8dfc39dface91b88edd5512590ece564dcd471b59
+    model-00003-of-000096.safetensors 17473009184 sha256 035b850ee61aedd83fec9af8979b17de5d38865a0f652e813340d0dbd31c9936
+    model-00004-of-000096.safetensors 17260934336 sha256 fcc1f7e4bf62ca6d30499c77e8f229768afdbaf03a58ecd8346f13501ee96bb2
+    model-00005-of-000096.safetensors 17473009184 sha256 03c4dbbb6284f5f48f0ba453f8e1c00fa1aa3766c903bb1b60aad1083badb5f6
+    model-00006-of-000096.safetensors 17473009184 sha256 dde3015af156fd1a1d0412c1e619e4ec2938dbf4ba8657ddb02b67be0e658bf5
+    model-00007-of-000096.safetensors 17473009184 sha256 684e155039a36b58d54d5c31fd6a407dded8780aad0745b735a9341e8b245c02
+    model-00008-of-000096.safetensors 17260934336 sha256 9f965ed4d7739962429377a76ac0f37fc94497d0622e7293d3160e4857cfc77e
+    model-00009-of-000096.safetensors 17473009184 sha256 3b397b4dd68c72465b6627e86a75a66a296b167289487d01fca4fea4c5ec51c8
+    model-00010-of-000096.safetensors 17473009184 sha256 96929347cec392347e3ca35d27e953f0828563e93bf45068d243336eccd66b32
+    model-00011-of-000096.safetensors 17473019976 sha256 fbcbb1f9dbcec5d8d2cf869a54214b10fcf5e7b4aa0c986efa231646f531acb1
+    model-00012-of-000096.safetensors 17260945120 sha256 1573aac5ec501ea452ee30fc3738ecde803f04879ab2968d2d2c565e3685955d
+    model-00013-of-000096.safetensors 17473019976 sha256 c08061cbb2c892f3bf82996904873ae4eab898e9290c31a9f4c9427a8d2331eb
+    model-00014-of-000096.safetensors 17473019976 sha256 ce205d6a948d6b2c720a01c169843981ffe46cdb38784c0b0c533d564cc4258c
+    model-00015-of-000096.safetensors 17473019976 sha256 f7ecbe73c2805715b1508fd100ce70f5bfefb33d927ad23050e4c7e17a4c2b85
+    model-00016-of-000096.safetensors 17260945120 sha256 4e6ed9913eb639bf86b2f43ff7c7bacd0f40f43d94bbb2494f334897fc3bc492
+    model-00017-of-000096.safetensors 17473019976 sha256 85b6390dda845d898d0d878edde4084ad2c8a11388728f3074c205a6706ee451
+    model-00018-of-000096.safetensors 17473019976 sha256 911d429e52248152f7ca5fc3a98b403d47f10fba7b81115db655e8e5bd9e3a88
+    model-00019-of-000096.safetensors 17473019976 sha256 0fc195323ad6cb6ea415c2d11c6d4f5ef280b1c577cf9e14b1a1c09cf9520580
+    model-00020-of-000096.safetensors 17260945120 sha256 24af36e948aef3677ef857d18cbb49ea674a8f1ca8b2d87e92a3b7464bd7b2c0
+    model-00021-of-000096.safetensors 17473019976 sha256 e95f956dbe53a3136b99b859dbd3d65e2ee0733b5934ddf0e376a7c8b38e53ef
+    model-00022-of-000096.safetensors 17473019976 sha256 96b983cdb1826ff27a19c19076b6d3a08909d8dc3e4c3d8e7320bdbf8904f381
+    model-00023-of-000096.safetensors 17473019976 sha256 f0c3e9705e22e0afcebdba7001ca13b5ae221ab42bea3e6b7403baba81deaa36
+    model-00024-of-000096.safetensors 17260945120 sha256 0fe78cb17e47bd9d074b79cf8bde9d8263cb7db29650b172d21bfc23ab4165ac
+    model-00025-of-000096.safetensors 17473019976 sha256 27d3f152fc7b5eb41fc2e091f01b69353b1127ed9d05c95a82693320597e14ed
+    model-00026-of-000096.safetensors 17473019976 sha256 11a7636d4e4e7162207e4fc11d4edc7f11c581ee618cf9333ec88133d45beeb0
+    model-00027-of-000096.safetensors 17473019976 sha256 71e23282dcbdce460ba987b91e82fa0ffab406bfbbe61be820f5eeeddc2c3eee
+    model-00028-of-000096.safetensors 17260945120 sha256 7013ba105fa8bf6fa0d00b0a4d87b9eefb668117008d213d27e84c9fe7325d60
+    model-00029-of-000096.safetensors 17473019976 sha256 3f3ae08cf59db5bb6db0cb9daf5d66011083d29aca5972fda2af1f4a887add92
+    model-00030-of-000096.safetensors 17473019976 sha256 a9228e9ed085371e57697f4358e7491a62164bb6db6050a6ef1980b8137064bd
+    model-00031-of-000096.safetensors 17473019976 sha256 57ac39ee8d5b311077369072c4fc7fd301fc23d28b7f4026dbe95a1a4b00cae7
+    model-00032-of-000096.safetensors 17260945120 sha256 fa7c208184cc85b29efc7b013e06101c6617bbb8a90f569f13361a44978cd5c4
+    model-00033-of-000096.safetensors 17473019976 sha256 9e9870fc472934b54c9768ecd643e70f5b916bacff3485721bc61e3cbdbce90b
+    model-00034-of-000096.safetensors 17473019976 sha256 e368a5ef7ead4bf1093c644daadf4d74e956bf3c772aed6dc791e2e95e3840c3
+    model-00035-of-000096.safetensors 17473019976 sha256 9e86aaebb675ed04d172796de73aa8ee2edcb73dc42d6bca6c770d6b03537746
+    model-00036-of-000096.safetensors 17260945120 sha256 5c5c908170f06b12e943da6824aadb9f1b04fbcea9a9a027c11d042485ac5e64
+    model-00037-of-000096.safetensors 17473019976 sha256 ce960afb653279159d72f78cedb5ee40f905c2dfba6a457857054eccc1e6d80e
+    model-00038-of-000096.safetensors 17473019976 sha256 df1c82f806365a3c2561da8c1d67d8f86d8899515ebac6aa5b55b0407a326804
+    model-00039-of-000096.safetensors 17473019976 sha256 7956a47e83a5726d5e6c894e7a3bad9b7f6fb546116f1e58301dcbe112e7f04f
+    model-00040-of-000096.safetensors 17260945120 sha256 593981077cdec46b69fe16336c191b39d449281206c048e6e236e15886cf7e5e
+    model-00041-of-000096.safetensors 17473019976 sha256 86522d77de76cb819509178c102ee374a10de801b7c22b28f1a3a7e14ad30638
+    model-00042-of-000096.safetensors 17473019976 sha256 08dc0bd8c21b890f5a01fe99671e1a13465df45759fd11fdccd9549a41022e0e
+    model-00043-of-000096.safetensors 17473019976 sha256 27b13461a8270cb6aebc0388567317681e54fb3954f80e7bea2cb41711c576da
+    model-00044-of-000096.safetensors 17260945120 sha256 24a85cb9496f4731968cee237c161d1797f360654b2af070a47f04e27c909e66
+    model-00045-of-000096.safetensors 17473019976 sha256 f607115f663d5103414a02b296678ff180a6f548319002e0e1452b167c7e1b1a
+    model-00046-of-000096.safetensors 17473019976 sha256 d84c5cffae8cc71c444c618b4f79b51fafbb940c1795ab5f1fb60481a06315b6
+    model-00047-of-000096.safetensors 17473019976 sha256 bc7b7abd3fe2c173e3e3487b1a327af654c8bb2c107b95587297c933edd9e998
+    model-00048-of-000096.safetensors 17260945120 sha256 16df44aa8ba0360c527fe852db846c28517e52860f9f007e0ad17e89c070b496
+    model-00049-of-000096.safetensors 17473019976 sha256 43f087be7bd8ee384bf4a9d246d2907c9e1cdf022eb1008162e6ef76904abd1e
+    model-00050-of-000096.safetensors 17473019976 sha256 cb5fbe354a198b9259b37b5d1ca95ef91dc473f4e3da32e928e753ca3960d279
+    model-00051-of-000096.safetensors 17473019976 sha256 b6e727dfb4f4c7bdf990b13bd863138ff33314607dd1cf4219e853b7b695f041
+    model-00052-of-000096.safetensors 17260945120 sha256 7c82dc1cfc9ef344cee6f241f76f6f119a1afebba4f859345e625727bcd43447
+    model-00053-of-000096.safetensors 17473019976 sha256 d9cefb920dd08ef89191585e802211499b95f44fb1903150d199c38f96e0786e
+    model-00054-of-000096.safetensors 17473019976 sha256 6c5be7d78e4ab97a51b19a5e144c1671a52ac2fa7fa819d40ded98c28bd4f67e
+    model-00055-of-000096.safetensors 17473019976 sha256 bf0cd8c54067085ef5d854c11c1f5f09790c67610670abfe4259b2f154f15f6d
+    model-00056-of-000096.safetensors 17260945120 sha256 5cfb13e951889b0476120579d91be5e5abde5a8d9a0819b63dfef8bdf3853ca8
+    model-00057-of-000096.safetensors 17473019976 sha256 0c0ca0eaba4b4cc719d52884e10ba00701c27ba92b4e59d15849c20082534951
+    model-00058-of-000096.safetensors 17473019976 sha256 2a96d749df023bf6eff07c2095843acb43c277093ca774e9021ec90e16dc52ae
+    model-00059-of-000096.safetensors 17473019976 sha256 d0c3c4228324bce811ec37c8a03944fe2dfb76bc73899528504bbcaf5539995d
+    model-00060-of-000096.safetensors 17260945120 sha256 c0b9e705f51cd9cf30fcd24257c551fe74f2337f3df1ec87b4e4cd183a808a3a
+    model-00061-of-000096.safetensors 17473019976 sha256 6f70d980ef319f845c42ad6ab386bdb0706531a465246a8ff50057a83fcbf2f2
+    model-00062-of-000096.safetensors 17473019976 sha256 ea3c6d6487c7610f165efe667b499150511d34d9c2e92c585a2560d92955bbce
+    model-00063-of-000096.safetensors 17473019976 sha256 cf5854e8c076c6cee2b1db59ca95c4c3941a1ac2ddd4f61905c374f65413bb67
+    model-00064-of-000096.safetensors 17260945120 sha256 abb402727ecd4480e806bc0244a8c180f58bc31fa1adf13b57185009e8433473
+    model-00065-of-000096.safetensors 17473019976 sha256 e4f2dd1578470d459ac7c91e99e7a0dfbdcde3b91c3a810a4146c1459845fdf9
+    model-00066-of-000096.safetensors 17473019976 sha256 8df878e6f2d2a94f6af1eafcbccb7e2b602e2b709583aa3618d00991bc771f92
+    model-00067-of-000096.safetensors 17473019976 sha256 110adebec2c1c93297ea2eeb20d2e746e5ba1017079a98585ec6c76b36cc1b9b
+    model-00068-of-000096.safetensors 17260945120 sha256 351853d72577cff62568013ce2fa21ae02527f52d9cdab0e4331ec706ad946be
+    model-00069-of-000096.safetensors 17473019976 sha256 5b2cba9520085f4648394aa43859c81d486563b0ce80e73cc71ee9d2bba476fd
+    model-00070-of-000096.safetensors 17473019976 sha256 1be155b76d18cf78d03879b6dc9b5fd517174ad54acc7b10784a8f16f71969f7
+    model-00071-of-000096.safetensors 17473019976 sha256 c07cf1f221d0f3f79f227a11e7820985c59c5c85d12cb235452d91c1fec6ea08
+    model-00072-of-000096.safetensors 17260945120 sha256 6522fb51030ca9669f91015711e851e04fc77e22d9d2322738c5c3127168a9a3
+    model-00073-of-000096.safetensors 17473019976 sha256 852f17a4d347be82069932e97f9524f17076991115bd9414e1300eb20ae032a9
+    model-00074-of-000096.safetensors 17473019976 sha256 6f31cbc471cff488225d3aeff797abf59b4d17b57602fe46dcf8cf218143b26f
+    model-00075-of-000096.safetensors 17473019976 sha256 5b79c23a2990b7dc5227871d7cb38a90795cf781cd1eb93c1e9ce1cdc6521922
+    model-00076-of-000096.safetensors 17260945120 sha256 f8583bc9e72a3dcba025f42bc168911efc9f53f571fa2175f04fb35b38dd950f
+    model-00077-of-000096.safetensors 17473019976 sha256 334c2c77c4ab42a258e5ecfdd3daf47b7e914980028cff2dca268105df692d07
+    model-00078-of-000096.safetensors 17473019976 sha256 fa26451c0f9543a0195f21b64488fa840dc5493fc7eb7ca576baaa74c3c6b393
+    model-00079-of-000096.safetensors 17473019976 sha256 04ea1573e9fbacdbb10b32a3ea5fe2b9cd1137fc97b1a99ba1782644bb552d7b
+    model-00080-of-000096.safetensors 17260945120 sha256 b986699bbceec16cb8c94f3209e78e8e8bab1d8b953fa5ae7bc9cf8e835c1e42
+    model-00081-of-000096.safetensors 17473019976 sha256 9feaf3773b7df1a87bcc8458737e7a8b8ec9315b6ae5793ed8a98890e41a21b5
+    model-00082-of-000096.safetensors 17473019976 sha256 573719b9e52e0d949eff32b9d3ec3ef134ee52a4c6def51979784487a6f0f29a
+    model-00083-of-000096.safetensors 17473019976 sha256 b16c5211da77afc1591d9559da0d0de34a2fbb50c414a84eb65cea3d4a2e526d
+    model-00084-of-000096.safetensors 17260945120 sha256 9319a17a5ebd80c061872796efd277899bee39039d264d899791191991cff8ed
+    model-00085-of-000096.safetensors 17473019976 sha256 f18fbcd4e1ff52d6d434e12af73ca16457d8cafb3e54d8f5166aab52d2c9db2d
+    model-00086-of-000096.safetensors 17473019976 sha256 4cad07d5dc3a14587899957de9762eabbd6807991e873fd6e35d79aa5957eca1
+    model-00087-of-000096.safetensors 17473019976 sha256 eb310cd3afacb173b5adf357e322c24035ac2dbab4fd97d9871d4457abb26258
+    model-00088-of-000096.safetensors 17260945120 sha256 56ba6405d443c5b549c3cb525c1cefdb3c6b2c5867b24da7c8284874b79061cb
+    model-00089-of-000096.safetensors 17473019976 sha256 f69dda6d5aae387c48e8e21fd0f4900f58ffe358b13a3e42e042549afc86a392
+    model-00090-of-000096.safetensors 17473019976 sha256 08c92ee2a5903a6ccaef9ac3db4f4e433518ea5c5ebb70cd03a01b14f55fc77b
+    model-00091-of-000096.safetensors 17473019976 sha256 c67245255345f0342e426ed0853bd6ef9426762240a9b1fe17fe147455bad152
+    model-00092-of-000096.safetensors 17260945120 sha256 5710a6c8654262b56ead58891336b8f9d2046a63501d50d5fa0d3a484cf60ab8
+    model-00093-of-000096.safetensors 17260945120 sha256 44e1a97a27c1c04f3b79cd9d082217d209c19eb081cf7765ec91504a1e5338c5
+    model-00094-of-000096.safetensors 4697664072 sha256 ad66e1cb96b86963e63d6a0a466b6a407b13c9815cb480fe612480cc6bb3b6e1
+    model-00095-of-000096.safetensors 92289328 sha256 01d41139abb8cf3b5288a97318cc4ab92676671b4eb141031cd80d7c3ced6122
+    model-00096-of-000096.safetensors 802448352 sha256 9d10c74fc10161bef9463a8541a634a97f521f43c99368ea7243ce0c79cdbf7c
+    model.safetensors.index.json 117595992 sha256 d8e106f404cdd92b53666b07c8225ec69ea86d55ead18dc3b9f5e2b7930a578d
+    modeling_kimi_k3.py 53444 gitsha1 be85612710534c2e41065b67933a9639e7817d7f
+    modeling_kimi_linear.py 51506 gitsha1 b8c41e8bfce768d74d8da3a37e693f5ee43876a0
+    preprocessor_config.json 1011 gitsha1 8be28c13c93fb8982f81928d3f4fe80568102286
+    runtime_patches/sitecustomize.py 12469 gitsha1 6af691b618833c97654fb472f7b66aca6ed5409b
+    tiktoken.model 2795286 sha256 b6c497a7469b33ced9c38afb1ad6e47f03f5e5dc05f15930799210ec050c5103
+    tokenization_kimi.py 16145 gitsha1 5df9d462b43295245084fbab46fd956020d4b84e
+    tokenizer_config.json 3478 gitsha1 418aaacbd996a6674efa89d26be06dae11433e1c
+  # RadixArk/Kimi-K3-DSpark @ 3c5bac301d9cf392706189d82ed947feca6c2f0f (HF tree API).
+  kimi-k3-dspark.manifest: |
+    .complete 19 gitsha1 0b4ac97505a774c1cb101147385b168be891c3bb
+    .gitattributes 1519 gitsha1 a6344aac8c09253b3b630fb776ae94478aa0275b
+    README.md 3899 gitsha1 9227dbfe7056e55b09da674294920c01b854ef9d
+    config.json 1352 gitsha1 6dbf81a39f7760c2c42a32cc972bc6b431ccce9e
+    dflash.py 19080 gitsha1 28992c82a9855e4a539354984e384c9c6039d715
+    dspark.py 6346 gitsha1 3d7bda332deb48ed7772e7a4fc7d7fc758bf1f6a
+    model.safetensors 4498585858 sha256 ecd746459b4a603ce0d2c64f73935efead29bd651b14439b99e57ee8b41b77ca
+  verify_hashes.py: |
+    """Hash every file of a staged checkpoint against its manifest.
+
+    usage: verify_hashes.py [--delete-bad] <dir> <manifest> <threads>
+    manifest lines: "<path> <size> sha256|gitsha1 <hex>" (gitsha1 = git blob sha1).
+    Prints one line per bad file and a summary; exit 0 only if every file matches.
+    --delete-bad unlinks files whose content mismatches at the right size, so the
+    next rsync re-fetches them (rsync skips a same-size, same-mtime file).
+    """
+    import hashlib
+    import os
+    import re
+    import stat
+    import sys
+    from concurrent.futures import ThreadPoolExecutor
+
+    LINE = re.compile(
+        r"^([A-Za-z0-9._/-]+) (0|[1-9][0-9]{0,14}) "
+        r"(sha256 [0-9a-f]{64}|gitsha1 [0-9a-f]{40})$")
+    CHUNK = 8 << 20
+
+
+    def load(path):
+        rows, seen = [], set()
+        with open(path, encoding="ascii") as fh:
+            for n, line in enumerate(fh.read().split("\n"), 1):
+                if line == "" and n > 1:
+                    continue
+                m = LINE.match(line)
+                if not m:
+                    raise ValueError(f"line {n} is malformed")
+                rel = m.group(1)
+                if any(p in ("", ".", "..") for p in rel.split("/")):
+                    raise ValueError(f"line {n}: unsafe path")
+                if rel in seen:
+                    raise ValueError(f"line {n}: duplicate path")
+                seen.add(rel)
+                kind, want = m.group(3).split(" ")
+                rows.append((rel, int(m.group(2)), kind, want))
+        if not rows:
+            raise ValueError("no entries")
+        return rows
+
+
+    def check(root, row):
+        rel, size, kind, want = row
+        path = os.path.join(root, rel)
+        if not os.path.realpath(path).startswith(root + os.sep):
+            return rel, "CORRUPT", "resolves outside the model directory"
+        try:
+            fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        except FileNotFoundError:
+            return rel, "MISSING", "absent"
+        except OSError as e:
+            return rel, "CORRUPT", f"cannot open ({e.strerror})"
+        with os.fdopen(fd, "rb") as fh:
+            st = os.fstat(fh.fileno())
+            if not stat.S_ISREG(st.st_mode):
+                return rel, "CORRUPT", "not a regular file"
+            if st.st_size != size:
+                return rel, "CORRUPT", f"{st.st_size} B, expected {size} B"
+            h = hashlib.sha256() if kind == "sha256" else hashlib.sha1(b"blob %d\0" % size)
+            try:
+                for chunk in iter(lambda: fh.read(CHUNK), b""):
+                    h.update(chunk)
+            except OSError as e:
+                return rel, "CORRUPT", f"read error ({e.strerror})"
+        if h.hexdigest() != want:
+            return rel, "MISMATCH", f"{kind} mismatch"
+        return rel, None, None
+
+
+    def main(argv):
+        args = argv[1:]
+        delete = bool(args) and args[0] == "--delete-bad"
+        if delete:
+            args = args[1:]
+        if len(args) != 3 or not re.fullmatch(r"[1-9][0-9]{0,2}", args[2]) or int(args[2]) > 256:
+            print("usage: verify_hashes.py [--delete-bad] <dir> <manifest> <threads 1-256>")
+            return 2
+        root = os.path.realpath(args[0])
+        if not os.path.isdir(root):
+            print(f"MISSING: {args[0]} is not a directory")
+            return 2
+        try:
+            rows = load(args[1])
+        except (OSError, ValueError, UnicodeDecodeError) as e:
+            print(f"CORRUPT: manifest {args[1]}: {e}")
+            return 2
+        with ThreadPoolExecutor(int(args[2])) as ex:
+            results = list(ex.map(lambda r: check(root, r), rows))
+        bad = [r for r in results if r[1]]
+        for rel, tag, why in bad:
+            if tag == "MISMATCH":
+                tag = "CORRUPT"
+                if delete:
+                    try:
+                        os.unlink(os.path.join(root, rel))
+                        why += "; deleted, the restage re-fetches it"
+                    except OSError as e:
+                        why += f"; delete failed ({e.strerror})"
+            print(f"{tag}: {rel}: {why}")
+        print(f"hashed {len(rows)} files: {len(rows) - len(bad)} match, {len(bad)} bad")
+        return 1 if bad else 0
+
+
+    if __name__ == "__main__":
+        sys.exit(main(sys.argv))
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: stage-kimi-k3-v3-assets
+  namespace: default
+  labels:
+    app: stage-kimi-k3-v3-assets
+spec:
+  selector:
+    matchLabels:
+      app: stage-kimi-k3-v3-assets
+  # Replace every pod at once on restart: a node-by-node rollout of a 1.6 TB
+  # copy would take a day.
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: "100%"
+  template:
+    metadata:
+      labels:
+        app: stage-kimi-k3-v3-assets
+    spec:
+      # Every node in the pool: sflow picks the nodes to reserve at run time.
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      # GCS access is the node service account (metadata server); no API token needed.
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: stage
+        # Multi-arch (arm64). Has bash, python3, sha256sum and gcloud; no curl.
+        # Runs as root: the hostPath directories are root-owned.
+        image: <registry>/cloudsdktool/google-cloud-cli:stable
+        envFrom:
+        - configMapRef:
+            name: stage-kimi-k3-v3-assets-src
+        env:
+        - name: NODE_NAME
+          valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+        securityContext:
+          allowPrivilegeEscalation: false
+        readinessProbe:
+          exec:
+            command: ["test", "-f", "/tmp/sflow-stage-ready"]
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 1
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -uo pipefail
+          MODELS=/model-cache
+          DATA=/mlperf-data
+          MAN=/stage-manifest
+          READY=/tmp/sflow-stage-ready
+          rm -f "${READY}"
+          FAILED=0
+          fail() { echo "MISSING: $*"; FAILED=1; }
+          idle() { trap 'exit 0' TERM; sleep infinity & wait; exit 0; }
+          echo "stage-kimi-k3-v3-assets on ${NODE_NAME:-unknown-node}"
+          : "${SRC_MODEL=}" "${SRC_MODEL_RECORD=}" "${RECORD_WAIT_MIN=}" "${MODEL_REPO=}"
+          : "${MODEL_REVISION=}" "${EXPECTED_MODEL_FILES=}" "${EXPECTED_MODEL_BYTES=}"
+          : "${SRC_DRAFT=}" "${DRAFT_REVISION=}" "${EXPECTED_DRAFT_FILES=}" "${EXPECTED_DRAFT_BYTES=}"
+          : "${SRC_DATASET=}" "${DATASET_SHA256=}" "${VERIFY_SHA256=}" "${HASH_THREADS=}"
+          : "${MIN_FREE_PCT_AFTER=}"
+
+          # --- 1. configuration and manifests (nothing on disk is touched yet) ---
+          CONFIG_OK=1
+          bad() { echo "CONFIG: $*"; CONFIG_OK=0; }
+          GS_RE='^<bucket>[a-z0-9][-a-z0-9_.]{1,61}[a-z0-9](/[A-Za-z0-9._-]+)+$'
+          INT_RE='^(0|[1-9][0-9]{0,14})$'
+          LINE_RE='^([A-Za-z0-9._/-]+) (0|[1-9][0-9]{0,14}) (sha256 [0-9a-f]{64}|gitsha1 [0-9a-f]{40})$'
+          DOT_RE='/\.\.?(/|$)'
+          REPO_RE='^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$'
+          gs_ok() { [[ "$1" =~ ${GS_RE} ]] && ! [[ "$1" =~ ${DOT_RE} ]]; }
+          for v in RECORD_WAIT_MIN EXPECTED_MODEL_FILES EXPECTED_MODEL_BYTES \
+                   EXPECTED_DRAFT_FILES EXPECTED_DRAFT_BYTES HASH_THREADS MIN_FREE_PCT_AFTER; do
+            [[ "${!v}" =~ ${INT_RE} ]] || bad "${v}='${!v}' is not a non-negative integer"
+          done
+          if [ "${CONFIG_OK}" = 1 ]; then
+            [ "${RECORD_WAIT_MIN}" -le 1440 ] || bad "RECORD_WAIT_MIN must be <= 1440"
+            [ "${HASH_THREADS}" -ge 1 ] && [ "${HASH_THREADS}" -le 256 ] || bad "HASH_THREADS must be 1..256"
+            [ "${MIN_FREE_PCT_AFTER}" -le 90 ] || bad "MIN_FREE_PCT_AFTER must be <= 90"
+            [ "${EXPECTED_MODEL_FILES}" -ge 1 ] && [ "${EXPECTED_DRAFT_FILES}" -ge 1 ] \
+              || bad "EXPECTED_*_FILES must be >= 1"
+          fi
+          [[ "${MODEL_REPO}" =~ ${REPO_RE} ]] \
+            || bad "MODEL_REPO='${MODEL_REPO}' is not <org>/<name>"
+          [[ "${MODEL_REVISION}" =~ ^[0-9a-f]{40}$ ]] || bad "MODEL_REVISION must be a 40-hex commit sha"
+          [[ "${DRAFT_REVISION}" =~ ^[0-9a-f]{40}$ ]] || bad "DRAFT_REVISION must be a 40-hex commit sha"
+          [[ "${DATASET_SHA256}" =~ ^[0-9a-f]{64}$ ]] || bad "DATASET_SHA256 must be 64 hex chars"
+          case "${VERIFY_SHA256}" in 0|1|force) ;; *) bad "VERIFY_SHA256 must be 0, 1 or force";; esac
+          if [ -n "${SRC_MODEL}" ]; then
+            { gs_ok "${SRC_MODEL}" && [[ "${SRC_MODEL}" == */Kimi-K3-NVFP4 ]]; } \
+              || bad "SRC_MODEL must be \"\" or <bucket><bucket>/.../Kimi-K3-NVFP4"
+            gs_ok "${SRC_MODEL_RECORD}" || bad "SRC_MODEL_RECORD is not a <bucket><bucket>/<object> URI"
+            b1=${SRC_MODEL#<bucket>; b2=${SRC_MODEL_RECORD#<bucket>
+            [ "${b1%%/*}" = "${b2%%/*}" ] || bad "SRC_MODEL_RECORD must be in the bucket of SRC_MODEL"
+            [[ "${SRC_MODEL_RECORD}" == *"${MODEL_REVISION:0:8}"* ]] \
+              || bad "SRC_MODEL_RECORD must name revision ${MODEL_REVISION:0:8}"
+          fi
+          if [ -n "${SRC_DRAFT}" ]; then
+            { gs_ok "${SRC_DRAFT}" && [[ "${SRC_DRAFT}" == */Kimi-K3-DSpark ]]; } \
+              || bad "SRC_DRAFT must be \"\" or <bucket><bucket>/.../Kimi-K3-DSpark"
+          fi
+          if [ -n "${SRC_DATASET}" ]; then
+            gs_ok "${SRC_DATASET}" || bad "SRC_DATASET must be \"\" or a <bucket> URI (no curl here)"
+          fi
+
+          check_manifest() {  # <file> <files> <bytes>
+            local f="$1" nf="$2" nb="$3" line path n=0 sum=0 rc=0
+            local -A seen=()
+            if [ ! -f "${f}" ] || [ ! -r "${f}" ]; then bad "manifest ${f} is missing"; return 1; fi
+            while IFS= read -r line || [ -n "${line}" ]; do
+              n=$((n + 1))
+              if ! [[ "${line}" =~ ${LINE_RE} ]]; then bad "${f}:${n}: malformed line"; rc=1; continue; fi
+              path=${BASH_REMATCH[1]}
+              if [[ "/${path}/" == *//* || "/${path}/" == */./* || "/${path}/" == */../* \
+                    || "/${path}" == */.sflow-* || "/${path}/" == */__pycache__/* || "${path}" == .cache/* ]]; then
+                bad "${f}:${n}: unsafe path '${path}'"; rc=1; continue
+              fi
+              if [ -n "${seen[${path}]:-}" ]; then bad "${f}:${n}: duplicate '${path}'"; rc=1; continue; fi
+              seen[${path}]=1
+              sum=$((sum + BASH_REMATCH[2]))
+            done < "${f}"
+            [ "${#seen[@]}" = "${nf}" ] || { bad "${f}: ${#seen[@]} entries, expected ${nf}"; rc=1; }
+            [ "${sum}" = "${nb}" ] || { bad "${f}: ${sum} B, expected ${nb} B"; rc=1; }
+            return "${rc}"
+          }
+          if [ "${CONFIG_OK}" = 1 ]; then
+            check_manifest "${MAN}/kimi-k3-nvfp4.manifest" "${EXPECTED_MODEL_FILES}" "${EXPECTED_MODEL_BYTES}"
+            check_manifest "${MAN}/kimi-k3-dspark.manifest" "${EXPECTED_DRAFT_FILES}" "${EXPECTED_DRAFT_BYTES}"
+          fi
+          [ -f "${MAN}/verify_hashes.py" ] || bad "${MAN}/verify_hashes.py is missing"
+          if [ "${CONFIG_OK}" != 1 ]; then
+            echo "NOT READY: invalid configuration (above); nothing was touched"
+            idle
+          fi
+          TMPD=$(mktemp -d) || { echo "NOT READY: mktemp failed"; idle; }
+
+          # --- helpers --------------------------------------------------------
+          # Names of every non-directory entry, minus HF/.pyc/marker noise.
+          tree_files() {  # <dir> <find -printf format>
+            find "$1" -mindepth 1 \( -path "$1/.cache" -o -name __pycache__ \) -prune \
+              -o ! -type d ! -name '.sflow-*' -printf "$2" 2>/dev/null
+          }
+          dir_matches() {  # <dir> <manifest> <files> <bytes>; details on stdout
+            local dir="$1" man="$2" nf="$3" nb="$4" path size kind hash have n=0 total=0 nbad=0 entries
+            if [ -L "${dir}" ] || [ ! -d "${dir}" ]; then echo "  - ${dir} does not exist"; return 1; fi
+            while read -r path size kind hash || [ -n "${path:-}" ]; do
+              if [ -L "${dir}/${path}" ] || [ ! -f "${dir}/${path}" ]; then
+                nbad=$((nbad + 1)); [ "${nbad}" -le 5 ] && echo "  - missing: ${path}"; continue
+              fi
+              have=$(stat -c %s -- "${dir}/${path}" 2>/dev/null) || have=-1
+              if [ "${have}" != "${size}" ]; then
+                nbad=$((nbad + 1)); [ "${nbad}" -le 5 ] && echo "  - size: ${path} is ${have} B, expected ${size} B"; continue
+              fi
+              n=$((n + 1)); total=$((total + have))
+            done < "${man}"
+            [ "${nbad}" -gt 5 ] && echo "  - ... and $((nbad - 5)) more"
+            entries=$(tree_files "${dir}" x | wc -c)
+            if [ "${entries}" != "${nf}" ]; then
+              echo "  - ${entries} files on disk, expected ${nf}"
+              comm -13 <(cut -d' ' -f1 "${man}" | LC_ALL=C sort) <(tree_files "${dir}" '%P\n' | LC_ALL=C sort) \
+                | head -n 5 | sed 's/^/  - extra: /'
+              return 1
+            fi
+            [ "${nbad}" = 0 ] && [ "${n}" = "${nf}" ] && [ "${total}" = "${nb}" ]
+          }
+          src_matches() {  # <gs-prefix> <manifest>; the bucket must hold exactly the manifest
+            local src="$1" man="$2"
+            if ! gcloud storage du "${src}" > "${TMPD}/du.out" 2> "${TMPD}/du.err"; then
+              echo "  - gcloud storage du ${src} failed: $(tail -n 1 "${TMPD}/du.err")"; return 1
+            fi
+            awk -v p="${src}/" 'index($2, p) == 1 && $2 !~ /\/$/ {
+                r = substr($2, length(p) + 1); if (r !~ /^\.cache\//) print r, $1 }' \
+              "${TMPD}/du.out" | LC_ALL=C sort > "${TMPD}/src.lst"
+            cut -d' ' -f1,2 "${man}" | LC_ALL=C sort > "${TMPD}/man.lst"
+            if ! cmp -s "${TMPD}/src.lst" "${TMPD}/man.lst"; then
+              diff "${TMPD}/man.lst" "${TMPD}/src.lst" | grep '^[<>]' | head -n 5 \
+                | sed -e 's/^</  - manifest only:/' -e 's/^>/  - bucket only:/'
+              return 1
+            fi
+          }
+          check_record() {  # stage_to_gcs.sh's upload verification record
+            local rec="" want deadline=$(( $(date +%s) + RECORD_WAIT_MIN * 60 ))
+            until rec=$(gcloud storage cat "${SRC_MODEL_RECORD}" 2>/dev/null | head -c 65536); do
+              if [ "$(date +%s)" -ge "${deadline}" ]; then
+                echo "  - ${SRC_MODEL_RECORD} not readable: upload not finished (the record is written last)?"
+                return 1
+              fi
+              echo "waiting for ${SRC_MODEL_RECORD} ..."
+              sleep 60
+            done
+            for want in "repo=${MODEL_REPO}" "revision=${MODEL_REVISION}" "files=${EXPECTED_MODEL_FILES}" \
+                        "bytes=${EXPECTED_MODEL_BYTES}" "VERIFIED ${EXPECTED_MODEL_FILES}/${EXPECTED_MODEL_FILES} files, extra=0"; do
+              grep -qxF -- "${want}" <<< "${rec}" || { echo "  - record lacks the line '${want}'"; return 1; }
+            done
+            if grep -q '^VERIFY_' <<< "${rec}"; then echo "  - record lists VERIFY_ failures"; return 1; fi
+            echo "VERIFIED: upload record ${SRC_MODEL_RECORD}"
+          }
+          check_space() {  # <dir> <bytes>
+            local dir="$1" want="$2" have=0 size avail need
+            [ -d "${dir}" ] && have=$(du -sb --exclude=.cache "${dir}" 2>/dev/null | cut -f1)
+            [[ "${have:-}" =~ ^[0-9]+$ ]] || have=0
+            need=$(( want > have ? want - have : 0 ))
+            read -r size avail < <(df -B1 --output=size,avail "${MODELS}" 2>/dev/null | tail -n 1)
+            if ! [[ "${size:-}" =~ ^[0-9]+$ && "${avail:-}" =~ ^[0-9]+$ ]]; then
+              echo "  - cannot read free space of ${MODELS}"; return 1
+            fi
+            if [ $(( avail - need )) -lt $(( size / 100 * MIN_FREE_PCT_AFTER )) ]; then
+              echo "  - needs ${need} B; ${avail} of ${size} B free would leave < ${MIN_FREE_PCT_AFTER}% free"
+              return 1
+            fi
+            echo "space: needs ${need} B, ${avail} of ${size} B free"
+          }
+          hashes_ok() {  # <label> <dir> <manifest> <rev> <may-delete 0|1>
+            local label="$1" dir="$2" man="$3" rev="$4" del=()
+            [ "${VERIFY_SHA256}" = 0 ] && return 0
+            if [ "${VERIFY_SHA256}" = 1 ] && [ "$(cat "${dir}/.sflow-sha256-verified" 2>/dev/null)" = "${rev}" ]; then
+              echo "VERIFIED (cached): ${label} sha256/sha1 of every file"
+              return 0
+            fi
+            rm -f "${dir}/.sflow-sha256-verified"
+            [ "$5" = 1 ] && del=(--delete-bad)
+            echo "hashing ${label} (${HASH_THREADS} threads) ..."
+            if python3 -B "${MAN}/verify_hashes.py" ${del[@]+"${del[@]}"} "${dir}" "${man}" "${HASH_THREADS}"; then
+              printf '%s\n' "${rev}" > "${dir}/.sflow-sha256-verified"
+              echo "VERIFIED: ${label} sha256/sha1 of every file"
+              return 0
+            fi
+            return 1
+          }
+
+          # --- 2-7. a checkpoint tree ------------------------------------------
+          stage_tree() {  # <label> <dir> <manifest> <files> <bytes> <src> <rev> <need-record> <accept-empty-marker>
+            local label="$1" dir="$2" man="$3" nf="$4" nb="$5" src="$6" rev="$7" need_record="$8" legacy="$9"
+            local marker may_delete=0
+            [ -n "${src}" ] && may_delete=1
+            if [ -f "${dir}/.sflow-staged" ]; then
+              marker=$(head -c 128 "${dir}/.sflow-staged" 2>/dev/null)
+              if [ "${marker}" = "${rev}" ] || { [ "${legacy}" = 1 ] && [ -z "${marker}" ]; }; then
+                if dir_matches "${dir}" "${man}" "${nf}" "${nb}"; then
+                  if hashes_ok "${label}" "${dir}" "${man}" "${rev}" "${may_delete}"; then
+                    if [ "${marker}" != "${rev}" ]; then
+                      if ! { printf '%s\n' "${rev}" > "${dir}/.sflow-staged.tmp" && mv -f "${dir}/.sflow-staged.tmp" "${dir}/.sflow-staged"; }; then
+                        fail "${label}: cannot write ${dir}/.sflow-staged"; return 1
+                      fi
+                    fi
+                    echo "STAGED (already complete): ${label} -> ${dir} (${nf} files, ${nb} B)"
+                    return 0
+                  fi
+                  echo "WARN: ${label} failed hash verification (above); restaging"
+                else
+                  echo "WARN: ${label} is marked staged but differs from the manifest (above); restaging"
+                fi
+              else
+                echo "WARN: ${dir}/.sflow-staged names '${marker//[^A-Za-z0-9._-]/?}', not ${rev}; restaging"
+              fi
+            fi
+            rm -f "${dir}/.sflow-staged" "${dir}/.sflow-staged.tmp" "${dir}/.sflow-sha256-verified"
+            if [ -z "${src}" ]; then
+              fail "${label}: ${dir} is not staged and its SRC_* is \"\" (verify-only)"; return 1
+            fi
+            if [ "${need_record}" = 1 ] && ! check_record; then
+              fail "${label}: no valid upload record (above); nothing copied"; return 1
+            fi
+            if ! src_matches "${src}" "${man}"; then
+              fail "${label}: ${src} does not match the manifest (above); nothing copied"; return 1
+            fi
+            if ! check_space "${dir}" "${nb}"; then
+              fail "${label}: not enough disk (above); nothing copied"; return 1
+            fi
+            mkdir -p "${dir}" || { fail "${label}: cannot create ${dir}"; return 1; }
+            echo "Copying ${label} from ${src} ... (resumable)"
+            if ! gcloud storage rsync --recursive --delete-unmatched-destination-objects \
+                 --exclude='^\.cache/|^\.sflow-|^(.*/)?__pycache__/' "${src}" "${dir}"; then
+              fail "${label}: copy from ${src} failed (rollout restart resumes it)"; return 1
+            fi
+            if ! dir_matches "${dir}" "${man}" "${nf}" "${nb}"; then
+              fail "${label}: copied tree differs from the manifest (above); NOT marking complete"; return 1
+            fi
+            if ! hashes_ok "${label}" "${dir}" "${man}" "${rev}" 1; then
+              fail "${label}: hash verification failed after copy (bad files deleted; rollout restart re-fetches)"
+              return 1
+            fi
+            if ! { printf '%s\n' "${rev}" > "${dir}/.sflow-staged.tmp" && mv -f "${dir}/.sflow-staged.tmp" "${dir}/.sflow-staged"; }; then
+              fail "${label}: cannot write ${dir}/.sflow-staged"; return 1
+            fi
+            echo "STAGED: ${label} -> ${dir} (${nf} files, ${nb} B)"
+          }
+
+          stage_dataset() {
+            local dest="${DATA}/mlperf_agentic_inference_dataset.jsonl" got
+            if [ -f "${dest}" ] && [ ! -L "${dest}" ]; then
+              got=$(sha256sum "${dest}" | cut -d' ' -f1)
+              if [ "${got}" = "${DATASET_SHA256}" ]; then
+                echo "STAGED (already present): agentic dataset -> ${dest}"
+                echo "VERIFIED: dataset sha256 matches the MLPerf runbook"
+                return 0
+              fi
+              echo "CORRUPT: dataset sha256 ${got} != ${DATASET_SHA256}"
+            fi
+            if [ -z "${SRC_DATASET}" ]; then
+              fail "agentic dataset: ${dest} is absent or wrong and SRC_DATASET is \"\" (verify-only)"; return 1
+            fi
+            rm -f "${dest}.tmp"
+            if ! gcloud storage cp "${SRC_DATASET}" "${dest}.tmp"; then
+              rm -f "${dest}.tmp"; fail "agentic dataset: copy from ${SRC_DATASET} failed"; return 1
+            fi
+            got=$(sha256sum "${dest}.tmp" | cut -d' ' -f1)
+            if [ "${got}" != "${DATASET_SHA256}" ]; then
+              rm -f "${dest}.tmp"
+              echo "CORRUPT: downloaded dataset sha256 ${got} != ${DATASET_SHA256}; not installed"
+              FAILED=1; return 1
+            fi
+            mv -f "${dest}.tmp" "${dest}" || { fail "agentic dataset: cannot install ${dest}"; return 1; }
+            echo "STAGED: agentic dataset -> ${dest}"
+            echo "VERIFIED: dataset sha256 matches the MLPerf runbook"
+          }
+
+          mkdir -p "${MODELS}" "${MODELS}/kimi-control-plane" "${DATA}"
+          stage_tree "Kimi-K3-NVFP4@${MODEL_REVISION:0:8}" "${MODELS}/Kimi-K3-NVFP4" \
+            "${MAN}/kimi-k3-nvfp4.manifest" "${EXPECTED_MODEL_FILES}" "${EXPECTED_MODEL_BYTES}" \
+            "${SRC_MODEL}" "${MODEL_REVISION}" 1 0
+          # The draft dir is shared with v1.0.1, whose marker is empty (touch).
+          stage_tree "Kimi-K3-DSpark@${DRAFT_REVISION:0:8}" "${MODELS}/Kimi-K3-DSpark" \
+            "${MAN}/kimi-k3-dspark.manifest" "${EXPECTED_DRAFT_FILES}" "${EXPECTED_DRAFT_BYTES}" \
+            "${SRC_DRAFT}" "${DRAFT_REVISION}" 0 1
+          stage_dataset
+          rm -rf "${TMPD}"
+
+          if [ "${FAILED}" = 0 ]; then
+            touch "${READY}"
+            echo "STAGED: node ready"
+          else
+            echo "NOT READY: fix the above, then kubectl rollout restart ds/stage-kimi-k3-v3-assets"
+          fi
+          idle
+        volumeMounts:
+        - {name: model-cache, mountPath: /model-cache}
+        - {name: mlperf-data, mountPath: /mlperf-data}
+        - {name: stage-manifest, mountPath: /stage-manifest, readOnly: true}
+        resources:
+          requests: {cpu: "500m", memory: 1Gi}
+      volumes:
+      - name: model-cache
+        hostPath:
+          path: <node-local-ssd>/model-cache
+          type: DirectoryOrCreate
+      - name: mlperf-data
+        hostPath:
+          path: <node-local-ssd>/mlperf-data
+          type: DirectoryOrCreate
+      - name: stage-manifest
+        configMap:
+          name: stage-kimi-k3-v3-assets-manifest
+          defaultMode: 0444

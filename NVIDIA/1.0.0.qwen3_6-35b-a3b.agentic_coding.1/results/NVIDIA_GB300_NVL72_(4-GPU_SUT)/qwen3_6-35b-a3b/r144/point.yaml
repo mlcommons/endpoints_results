@@ -1,0 +1,46 @@
+concurrency: 144
+region: high_concurrency
+shared_src: src
+shared_docs: docs
+seed_set: A
+target_cohort: 2026-10-C1
+division: Standardized
+max_supported_concurrency: 768
+model_name: qwen3_6-35b-a3b
+model_precision: mxfp8
+link_to_model: https://huggingface.co/Qwen/Qwen3.6-35B-A3B/tree/995ad96eacd98c81ed38be0c5b274b04031597b0
+link_to_model_transformation: null
+model_notes: Online MXFP8 from the published BF16 checkpoint, using the pinned image
+  implementation and its recorded quantization exclusions
+dataset_name: agentic_coding
+dataset_type: Accuracy + Performance
+dataset_link: https://endpoints.mlcommons-storage.org/index.html#mlperf-agentic-inference
+dataset: agentic_coding
+runtime_settings:
+  load_pattern: agentic_inference
+  target_concurrency: 144
+  stream_all_chunks: false
+  runtime:
+    scheduler_rng_seed: 10487924139932647040
+    sample_index_rng_seed: 586478644936801402
+    # model_seed is not used: the client seeds only the scheduler and sample-index RNGs,
+    # and no rule defines what model_seed seeds. Declared from the bound seed set for the
+    # checker's seed-runtime-match only.
+    model_seed: 9315206023656308754
+warmup:
+  duration_s: 0
+  requests_issued: 0
+  requests_completed: 0
+  data_source: none; warmup disabled
+  concurrency: 0
+  initialization_steps: []
+offline: none
+speculative_decoding:
+  method: qwen3_next_mtp
+  params:
+    num_speculative_tokens: 3
+  model_id: Qwen/Qwen3.6-35B-A3B
+  weight_checksum: git-sha1:995ad96eacd98c81ed38be0c5b274b04031597b0
+nodes_used:
+- system_node_ensemble_id: 0
+  nodes: 1

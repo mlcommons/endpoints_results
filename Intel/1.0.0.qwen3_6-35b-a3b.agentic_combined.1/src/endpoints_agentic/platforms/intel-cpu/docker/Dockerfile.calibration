@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1
+
+# linux/amd64 python:3.12.14-slim-trixie
+FROM python:3.12-slim@sha256:44ff437bba879d4941b710a369a8f19266aea34b29002807f0c487fabc9eec9b
+
+RUN apt-get update -o APT::Update::Error-Mode=any \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m pip install --no-cache-dir \
+        "torch==2.13.0+cpu" \
+        "torchvision==0.28.0+cpu" \
+        --index-url https://download.pytorch.org/whl/cpu \
+    && python -m pip install --no-cache-dir \
+        "compressed-tensors==0.18.0" \
+        "datasets==5.0.1" \
+        "fsspec==2026.6.0" \
+        "llmcompressor==0.13.0" \
+        "safetensors==0.8.0" \
+        "setuptools==84.0.0" \
+        "torch==2.13.0" \
+        "transformers==5.10.1"
+
+USER 65534:65534

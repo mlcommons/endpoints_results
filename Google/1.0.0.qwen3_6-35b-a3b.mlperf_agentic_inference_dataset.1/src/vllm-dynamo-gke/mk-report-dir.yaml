@@ -1,0 +1,53 @@
+# Create the durable Qwen3.6-35B-A3B report directory on every <nodepool> node.
+#
+#   <node-local-ssd>/qwen3.6-35b-a3b-reports
+#
+#   kubectl apply -f mk-report-dir.yaml
+#   kubectl rollout status ds/qwen36-mk-report-dir --timeout=300s
+#   kubectl delete -f mk-report-dir.yaml      # the directory persists
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: qwen36-mk-report-dir
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: qwen36-mk-report-dir
+  template:
+    metadata:
+      labels:
+        app: qwen36-mk-report-dir
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: mkdir
+          image: <registry>/cloudsdktool/google-cloud-cli:stable
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              D=/host-ssd/qwen3.6-35b-a3b-reports
+              mkdir -p "$D"
+              chmod 1777 "$D"
+              echo "ready: $(ls -ld "$D")"
+              sleep infinity
+          volumeMounts:
+            - name: host-ssd
+              mountPath: /host-ssd
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      volumes:
+        - name: host-ssd
+          hostPath:
+            path: <node-local-ssd>
+            type: Directory

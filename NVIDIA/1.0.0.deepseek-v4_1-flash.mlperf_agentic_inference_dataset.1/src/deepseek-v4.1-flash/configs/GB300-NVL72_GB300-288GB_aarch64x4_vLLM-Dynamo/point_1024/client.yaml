@@ -1,0 +1,66 @@
+name: deepseek-v4.1-flash-c1024
+version: '1.0'
+type: online
+submission_ref:
+  model: deepseek-ai/DeepSeek-V4.1-Flash
+  ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+model_params:
+  name: deepseek-ai/DeepSeek-V4.1-Flash
+  tokenizer_name: ${MODEL_PATH}
+  temperature: 1.0
+  top_k: 0
+  top_p: 0.95
+  max_new_tokens: 8192
+  streaming: 'on'
+  chat_template_kwargs:
+    thinking: true
+    reasoning_effort: max
+datasets:
+- name: mlperf_agentic_inference_dataset
+  type: performance
+  path: ${DATA_PATH}/perf/mlperf_agentic_inference_dataset.jsonl
+  accuracy_config:
+    eval_method: agentic_inference_inline
+  agentic_inference:
+    turn_timeout_s: 86400.0
+    enable_salt: true
+    inject_tool_delay: true
+    routing_headers:
+    - X-Dynamo-Session-ID
+    num_trajectories_to_issue: ${NUM_TRAJECTORIES}
+    stop_issuing_on_first_user_complete: false
+- name: swe_bench
+  type: accuracy
+  accuracy_config:
+    eval_method: swe_bench_scorer
+    num_repeats: 1
+    extras:
+      swebench_service_url: http://127.0.0.1:18080
+      swebench_service_auth_token: local-swebench-service-token
+      subset: verified
+      split: test
+      num_instances: 20
+      workers: 12
+      max_eval_workers: 12
+      service_timeout_s: 86400
+      poll_interval_s: 5
+settings:
+  load_pattern:
+    type: agentic_inference
+    target_concurrency: ${CONCURRENCY}
+  client:
+    num_workers: 8
+    warmup_connections: 0
+    min_required_connections: 0
+    worker_initialization_timeout: 300.0
+  timeouts:
+    warmup_drain_timeout_s: null
+    performance_drain_timeout_s: null
+    metrics_drain_timeout_s: 1800.0
+  metrics_tokenizer_workers: 16
+  metrics_isl: false
+endpoint_config:
+  endpoints: []
+  api_type: openai
+  api_key: EMPTY
+report_dir: ${SFLOW_TASK_OUTPUT_DIR}/report

@@ -1,0 +1,8 @@
+# Redirect: this legacy full-metadata example is retired.
+#
+# Full campaigns take human input from submission_disclosures.yaml and combine
+# it with observed host/runtime facts in a new per-run metadata snapshot.
+# The campaign's `metadata:` path is only the optional output destination for
+# init_submission_metadata.sh; it is never loaded as campaign input.
+#
+# Start from submission_disclosures.example.yaml instead.

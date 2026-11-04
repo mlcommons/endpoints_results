@@ -1,0 +1,45 @@
+name: deepseek-r1-c32
+version: '1.0'
+type: submission
+benchmark_mode: online
+submission_ref:
+  model: deepseek-r1
+  ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+model_params:
+  name: ${MODEL_PATH}
+  tokenizer_name: ${MODEL_PATH}
+  temperature: 0.0
+  top_p: 1.0
+  max_new_tokens: 20000
+  streaming: 'on'
+datasets:
+- name: dsr1-perf
+  type: performance
+  path: ${DATA_PATH}
+- name: deepseek_r1_accuracy
+  type: accuracy
+  path: ${DATA_PATH}
+  accuracy_config:
+    eval_method: legacy_mlperf_deepseek_r1
+    ground_truth: ground_truth
+    num_repeats: 1
+    extras:
+      subset_column: dataset
+      question_column: question
+      tokenizer_path: ${MODEL_PATH}
+settings:
+  runtime:
+    n_samples_to_issue: 8776
+  load_pattern:
+    type: concurrency
+    target_concurrency: 32
+  client:
+    num_workers: 8
+    warmup_connections: 0
+    min_required_connections: 0
+    worker_initialization_timeout: 300.0
+endpoint_config:
+  endpoints: []
+  api_type: openai_completions
+  api_key: null
+report_dir: ${SFLOW_TASK_OUTPUT_DIR}

@@ -1,0 +1,52 @@
+{
+  "system_desc_id": "GB300-NVL72_GB300-288GB_aarch64x48_TRTLLM-Dynamo",
+  "cooling": "liquid",
+  "node_sets": [
+    {
+      "node_set_id": 0,
+      "system_node_ensemble_id": 0,
+      "nodes_provisioned": 12,
+      "power_method": "node_scaling",
+      "published_power": {
+        "value_kw": 135.0,
+        "source_type": "vendor_spec",
+        "source": "https://docs.nvidia.com/mission-control/docs/systems-administration-guide/2.3.1/prs/faq.html#example-1-configuring-a-pd-for-a-gb200-gb300-nvl72-rack"
+      },
+      "nodes_in_published_rack": 18,
+      "components": {
+        "cpu": {
+          "model": "NVIDIA Grace (ARM Neoverse-V2)",
+          "count_per_node": 2,
+          "tdp_per_unit": null
+        },
+        "accelerator": {
+          "model": "NVIDIA GB300",
+          "count_per_node": 4,
+          "tdp_per_unit": null,
+          "below_rated_tdp": null
+        },
+        "combined_cpu_accelerator": null,
+        "scale_up_network": null
+      }
+    }
+  ],
+  "scale_out": {
+    "present": false,
+    "cabling": null,
+    "required_bandwidth_tbps": null,
+    "nics": null,
+    "switches": null
+  },
+  "declared_provisioned_power": null,
+  "computed": {
+    "major_components_w": null,
+    "overhead_fraction": null,
+    "other_components_w": null,
+    "published_node_power_w": null,
+    "scale_out_switch_power_w": null,
+    "total_system_power_w": null
+  },
+  "provisioned_power_kw": 90.0,
+  "mlc_estimated_power": false,
+  "notes": "12 of 18 nodes: \u00a74.5.2.1 rack-level node scaling, 135 kW \u00d7 12/18 = 90.00 kW. The nodes are joined by the NVLink scale-up fabric, which the rack figure includes, so no scale-out fabric is declared."
+}

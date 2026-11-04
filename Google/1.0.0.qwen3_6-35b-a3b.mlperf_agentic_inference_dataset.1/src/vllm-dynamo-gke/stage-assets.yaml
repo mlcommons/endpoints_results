@@ -1,0 +1,270 @@
+# Stage the Qwen3.6-35B-A3B assets onto EVERY node of the A4X-max pool.
+#
+#   <node-local-ssd>/model-cache/Qwen3.6-35B-A3B      (BF16, pinned revision)
+#   <node-local-ssd>/mlperf-data/mlperf_agentic_inference_dataset.jsonl
+#
+# WHY A DAEMONSET: GKE has no shared filesystem; sflow's fs:// artifacts are
+# hostPath windows onto the node's own SSD, not a fetch. The run needs only one
+# node, but sflow picks WHICH node at run time (index 0 is a different machine
+# every run), so stage the whole pool. ~72 GB/node against ~11 TB of local SSD.
+# On Kubernetes a missing fs:// path is only a plan-time WARNING; the recipe's
+# tasks hard-fail on a missing/wrong-revision model or a bad dataset sha256.
+#
+#   kubectl create secret generic hf-token --from-literal=token="$(cat <workdir>/.hf_token_file)"   # optional, never inline
+#   kubectl apply -f stage-assets.yaml
+#   kubectl rollout status ds/stage-qwen36-assets --timeout=60m
+#   kubectl logs -l app=stage-qwen36-assets -c stage --tail=3 --prefix | sort
+#       every node must end with:  STAGED: node ready
+#   kubectl delete -f stage-assets.yaml            # the staged files persist
+#
+# Re-applying later is a cheap verification pass (sizes, shards, marker, sha256).
+# Local SSD is wiped when a node is recreated: restage after any nodepool operation.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stage-qwen36-assets-src
+  namespace: default
+data:
+  # From NVIDIA/src/qwen3.6-35b-a3b/configs/dependencies.json (MODEL_REPOSITORY /
+  # MODEL_REVISION). The BF16 SOURCE model: vLLM quantizes to MXFP8 online;
+  # prequantized weights are NOT compatible (drop README).
+  #
+  # Two source forms:
+  #   hf://<repo>@<40-char sha>   hf download --revision, straight from HuggingFace
+  #                               onto each node (fetch-hf init container).
+  #   <bucket>/path            gcloud storage rsync (main container). You assert
+  #                               the bucket holds MODEL_REVISION; it is written to
+  #                               the marker the recipe checks.
+  SRC_MODEL: "hf://Qwen/Qwen3.6-35B-A3B@995ad96eacd98c81ed38be0c5b274b04031597b0"
+  MODEL_REVISION: "995ad96eacd98c81ed38be0c5b274b04031597b0"
+  MODEL_DIRNAME: "Qwen3.6-35B-A3B"
+  # Minimum on-disk size of the checkpoint (26 safetensors shards = 71,903,776,776 B;
+  # repo total across 40 files = 71,926,865,825 B).
+  EXPECTED_MODEL_MIN_BYTES: "71900000000"
+  # The unchanged 613-trajectory agentic JSONL (dataset/README.md): MLCommons
+  # storage, https://endpoints.mlcommons-storage.org/index.html#mlperf-agentic-inference
+  # This bucket copy has the same sha256 (it is the Kimi-K3 v1.0.0 staging copy).
+  # <bucket> -> main container; http(s):// -> fetch-hf init container.
+  SRC_DATASET: "<bucket>/mlperf-data/mlperf_agentic_inference_dataset.jsonl"
+  DATASET_FILENAME: "mlperf_agentic_inference_dataset.jsonl"
+  # A node staged for v1.0.2 Qwen3.6 already has this file under agentic_combined_v6.jsonl;
+  # it is copied locally if (and only if) its sha256 matches.
+  LOCAL_DATASET_ALIAS: "agentic_combined_v6.jsonl"
+  # dependencies.json DATASET_SHA256. Leave as-is.
+  DATASET_SHA256: "1beb24c882122df96571cf11b390acbea388944038bc55c78b891475459014ae"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: stage-qwen36-assets
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: stage-qwen36-assets
+  template:
+    metadata:
+      labels:
+        app: stage-qwen36-assets
+    spec:
+      # Deliberately every node in the pool, not just the one the run reserves.
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      initContainers:
+      # hf:// model and http(s):// dataset only; a no-op for <bucket> sources.
+      # hf download is resumable and skips complete files, so re-applying (or a
+      # pod restart) continues rather than restarting.
+      - name: fetch-hf
+        # Multi-arch (linux/arm64 manifest), has pip and a CA bundle.
+        # google-cloud-cli:stable has neither curl nor CA certs for python.
+        image: python:3.12-slim
+        envFrom:
+        - configMapRef:
+            name: stage-qwen36-assets-src
+        env:
+        - name: HF_XET_HIGH_PERFORMANCE
+          value: "1"
+        - name: NODE_NAME
+          valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+        # Optional (public repo), but unauthenticated was ~4x slower and 18 nodes
+        # behind one NAT IP can hit the anonymous rate limit. NEVER inline a token.
+        - name: HF_TOKEN
+          valueFrom:
+            secretKeyRef: {name: hf-token, key: token, optional: true}
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -uo pipefail
+          DATASET="/mlperf-data/${DATASET_FILENAME}"
+          case "${SRC_DATASET}" in
+            http://*|https://*)
+              if [ -s "${DATASET}" ]; then
+                echo "dataset already present: ${DATASET}"
+              else
+                echo "fetching dataset ${SRC_DATASET}"
+                python3 -c 'import sys, urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])' \
+                    "${SRC_DATASET}" "${DATASET}.tmp" && mv "${DATASET}.tmp" "${DATASET}" \
+                  || { rm -f "${DATASET}.tmp"; echo "FATAL: dataset download failed"; exit 1; }
+                echo "FETCHED: ${DATASET}"
+              fi;;
+          esac
+          case "${SRC_MODEL}" in hf://*) ;; *) echo "SRC_MODEL is not hf:// -- nothing to fetch"; exit 0;; esac
+          spec="${SRC_MODEL#hf://}"; repo="${spec%@*}"; rev="${spec##*@}"
+          if [ "${repo}" = "${spec}" ] || ! [[ "${rev}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "FATAL: SRC_MODEL must be hf://<repo>@<40-char commit sha>, got ${SRC_MODEL}"; exit 1
+          fi
+          if [ "${rev}" != "${MODEL_REVISION}" ]; then
+            echo "FATAL: SRC_MODEL revision ${rev} != MODEL_REVISION ${MODEL_REVISION}"; exit 1
+          fi
+          MODEL_DIR="/model-cache/${MODEL_DIRNAME}"
+          mkdir -p "${MODEL_DIR}"
+          have=$(du -sb "${MODEL_DIR}" | cut -f1)
+          if [ "$(cat "${MODEL_DIR}/.sflow-staged" 2>/dev/null)" = "${rev}" ] && [ "${have}" -ge "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+            echo "already staged: ${repo}@${rev:0:12} (${have} B)"; exit 0
+          fi
+          rm -f "${MODEL_DIR}/.sflow-staged"
+          pip install -q --no-cache-dir "huggingface_hub[cli]" || exit 1
+          python3 -c 'import huggingface_hub as h; print("huggingface_hub", h.__version__)'
+          for attempt in 1 2 3; do
+            echo "attempt ${attempt}: hf download ${repo} --revision ${rev} -> ${MODEL_DIR} on ${NODE_NAME}"
+            if hf download "${repo}" --revision "${rev}" --local-dir "${MODEL_DIR}" --quiet; then
+              # Leftover partials made per-node sizes disagree on DSR1.
+              find "${MODEL_DIR}" -name '*.incomplete' -delete 2>/dev/null || true
+              got=$(du -sb "${MODEL_DIR}" | cut -f1)
+              if [ "${got}" -ge "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+                echo "${rev}" > "${MODEL_DIR}/.sflow-staged"
+                echo "FETCHED: ${repo}@${rev:0:12} (${got} B)"; exit 0
+              fi
+              echo "downloaded only ${got} B (< ${EXPECTED_MODEL_MIN_BYTES}); retrying"
+            fi
+            sleep $((attempt * 30))
+          done
+          echo "FATAL: fetch failed after 3 attempts"; exit 1
+        volumeMounts:
+        - {name: model-cache, mountPath: /model-cache}
+        - {name: mlperf-data, mountPath: /mlperf-data}
+        resources:
+          requests: {cpu: "4", memory: 4Gi}
+      containers:
+      - name: stage
+        # MUST be multi-arch: these are arm64 GB300 nodes. `:stable` is
+        # amd64+arm64; the `*-slim` tags are amd64-only ("exec format error").
+        image: <registry>/cloudsdktool/google-cloud-cli:stable
+        envFrom:
+        - configMapRef:
+            name: stage-qwen36-assets-src
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -uo pipefail
+          MODEL_DIR="/model-cache/${MODEL_DIRNAME}"
+          DATASET="/mlperf-data/${DATASET_FILENAME}"
+          mkdir -p /model-cache /mlperf-data
+          FAILED=0
+          fail() { echo "MISSING: $*"; FAILED=1; }
+
+          # --- model checkpoint ---------------------------------------------
+          stage_model() {
+            if [[ "${SRC_MODEL}" != hf://* ]] && [ "$(cat "${MODEL_DIR}/.sflow-staged" 2>/dev/null)" != "${MODEL_REVISION}" ]; then
+              if [ -z "${SRC_MODEL}" ] || [[ "${SRC_MODEL}" == *REPLACE-ME* ]]; then
+                fail "${MODEL_DIRNAME}: not staged at ${MODEL_REVISION} and SRC_MODEL is not configured"; return 1
+              fi
+              rm -f "${MODEL_DIR}/.sflow-staged"
+              echo "Copying ${MODEL_DIRNAME} from ${SRC_MODEL} ... (resumable)"
+              if ! gcloud storage rsync --recursive "${SRC_MODEL}" "${MODEL_DIR}"; then
+                fail "${MODEL_DIRNAME}: copy failed (re-apply to resume)"; return 1
+              fi
+              got=$(du -sb "${MODEL_DIR}" 2>/dev/null | cut -f1)
+              if [ -z "${got}" ] || [ "${got}" -lt "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+                fail "${MODEL_DIRNAME}: staged ${got:-0} B < ${EXPECTED_MODEL_MIN_BYTES} B -- source incomplete? NOT marking complete"
+                return 1
+              fi
+              echo "${MODEL_REVISION}" > "${MODEL_DIR}/.sflow-staged"
+            fi
+            # Re-validate on every apply: the marker proves the copy finished,
+            # not that the source was complete or that nothing was trimmed since.
+            have=$(du -sb "${MODEL_DIR}" 2>/dev/null | cut -f1)
+            marker="$(cat "${MODEL_DIR}/.sflow-staged" 2>/dev/null)"
+            if [ "${marker}" != "${MODEL_REVISION}" ]; then
+              fail "${MODEL_DIRNAME}: marker '${marker}' != ${MODEL_REVISION} (kubectl logs -c fetch-hf)"; return 1
+            fi
+            if [ -z "${have}" ] || [ "${have}" -lt "${EXPECTED_MODEL_MIN_BYTES}" ]; then
+              fail "${MODEL_DIRNAME}: only ${have:-0} B (< ${EXPECTED_MODEL_MIN_BYTES}); rm the marker and re-apply"; return 1
+            fi
+            echo "STAGED: ${MODEL_DIRNAME} @ ${MODEL_REVISION:0:12} -> ${MODEL_DIR} (${have} B)"
+          }
+
+          # --- agentic dataset ------------------------------------------------
+          stage_dataset() {
+            alias_path="/mlperf-data/${LOCAL_DATASET_ALIAS}"
+            if [ -s "${DATASET}" ]; then
+              echo "dataset present: ${DATASET}"
+            elif [ -n "${LOCAL_DATASET_ALIAS}" ] && [ -s "${alias_path}" ] \
+                && [ "$(sha256sum "${alias_path}" | cut -d' ' -f1)" = "${DATASET_SHA256}" ]; then
+              cp "${alias_path}" "${DATASET}.tmp" && mv "${DATASET}.tmp" "${DATASET}" \
+                && echo "STAGED: ${DATASET} (local copy of ${alias_path})" || fail "local dataset copy failed"
+            elif [[ "${SRC_DATASET}" == <bucket> ]]; then
+              gcloud storage cp "${SRC_DATASET}" "${DATASET}.tmp" && mv "${DATASET}.tmp" "${DATASET}" \
+                && echo "STAGED: ${DATASET}" || fail "dataset copy from ${SRC_DATASET} failed"
+            else
+              fail "${DATASET}: absent (http(s) sources are fetched by fetch-hf; kubectl logs -c fetch-hf)"
+            fi
+          }
+
+          stage_model
+          stage_dataset
+
+          # --- verification ---------------------------------------------------
+          if [ -s "${DATASET}" ]; then
+            GOT=$(sha256sum "${DATASET}" | cut -d' ' -f1)
+            if [ "${GOT}" = "${DATASET_SHA256}" ]; then
+              echo "VERIFIED: dataset sha256 ${GOT:0:12} matches dependencies.json"
+            else
+              echo "CORRUPT: dataset sha256 ${GOT} != ${DATASET_SHA256}"; FAILED=1
+            fi
+          else
+            fail "${DATASET}"
+          fi
+          # The client tokenizes with this checkpoint too (client.yaml
+          # tokenizer_name: MODEL_PATH), so the tokenizer files must be here.
+          for f in config.json tokenizer_config.json model.safetensors.index.json; do
+            [ -s "${MODEL_DIR}/${f}" ] || fail "${MODEL_DIRNAME}/${f}"
+          done
+          # Every shard the index names must exist and be non-empty.
+          if [ -s "${MODEL_DIR}/model.safetensors.index.json" ]; then
+            if python3 - "${MODEL_DIR}" <<'PY_SHARDS'
+          import json, os, sys
+          d = sys.argv[1]
+          shards = sorted(set(json.load(open(os.path.join(d, 'model.safetensors.index.json')))['weight_map'].values()))
+          bad = [s for s in shards if not os.path.isfile(os.path.join(d, s)) or os.path.getsize(os.path.join(d, s)) == 0]
+          print(f'shards: {len(shards) - len(bad)}/{len(shards)} present')
+          sys.exit(1 if bad else 0)
+          PY_SHARDS
+            then echo "VERIFIED: all safetensors shards present"
+            else fail "${MODEL_DIRNAME}: shards missing (see above)"
+            fi
+          fi
+
+          if [ "${FAILED}" = 0 ]; then
+            echo "STAGED: node ready"
+          else
+            echo "NOT READY: fix the above before running any point recipe"
+          fi
+          sleep infinity
+        volumeMounts:
+        - {name: model-cache, mountPath: /model-cache}
+        - {name: mlperf-data, mountPath: /mlperf-data}
+        resources:
+          requests: {cpu: "500m", memory: 1Gi}
+      volumes:
+      - name: model-cache
+        hostPath:
+          path: <node-local-ssd>/model-cache
+          type: DirectoryOrCreate
+      - name: mlperf-data
+        hostPath:
+          path: <node-local-ssd>/mlperf-data
+          type: DirectoryOrCreate

@@ -1,0 +1,73 @@
+# Adapted for this benchmark from llm-d-router v0.10.0 examples.
+# This is the always-on P/D scheduler for this benchmark. Every request
+# selects a prefill endpoint and a decode endpoint; session affinity keeps
+# established sessions on their previously selected endpoints, while the
+# active-request scorer places new sessions within each role pool.
+# llm-d-router is licensed under Apache-2.0:
+# https://github.com/llm-d/llm-d-router/tree/v0.10.0
+apiVersion: llm-d.ai/v1alpha1
+kind: EndpointPickerConfig
+plugins:
+  - type: file-discovery
+    parameters:
+      path: /etc/epp/endpoints.yaml
+
+  - type: session-affinity-filter
+    name: session-affinity-prefill
+    parameters:
+      strategy: session_id
+      profileName: prefill
+      sessionIdConfig:
+        evictionTtlSeconds: __SESSION_TTL_SECONDS__
+
+  - type: session-affinity-filter
+    name: session-affinity-decode
+    parameters:
+      strategy: session_id
+      sessionIdConfig:
+        evictionTtlSeconds: __SESSION_TTL_SECONDS__
+
+  - type: active-request-scorer
+
+  - type: prefill-filter
+  - type: decode-filter
+  - type: max-score-picker
+
+  - type: always-disagg-pd-decider
+    name: always-disagg-pd-decider
+
+  - type: disagg-profile-handler
+    parameters:
+      profiles:
+        prefill: prefill
+        decode: decode
+      deciders:
+        prefill: always-disagg-pd-decider
+
+  - type: openai-parser
+  - type: passthrough-parser
+
+requestHandler:
+  parsers:
+    - pluginRef: openai-parser
+    - pluginRef: passthrough-parser
+
+schedulingProfiles:
+  - name: prefill
+    plugins:
+      - pluginRef: session-affinity-prefill
+      - pluginRef: prefill-filter
+      - pluginRef: active-request-scorer
+      - pluginRef: max-score-picker
+
+  - name: decode
+    plugins:
+      - pluginRef: session-affinity-decode
+      - pluginRef: decode-filter
+      - pluginRef: active-request-scorer
+      - pluginRef: max-score-picker
+
+dataLayer:
+  injectDefaults: false
+  discovery:
+    pluginRef: file-discovery

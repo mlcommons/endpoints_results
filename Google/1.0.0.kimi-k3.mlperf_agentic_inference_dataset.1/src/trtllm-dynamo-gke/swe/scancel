@@ -1,0 +1,5 @@
+#!/bin/sh
+# GKE stand-in for Slurm's `scancel`, for the Kimi-K3 SWE-bench service only.
+# The drop's swe_cleanup only calls scancel for steps reported by squeue. The squeue shim
+# reports none, so this never runs; it exists so a stray call cannot fail with ENOENT.
+exit 0

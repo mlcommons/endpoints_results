@@ -1,0 +1,6 @@
+PATH: /opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TIKTOKEN_RS_CACHE_DIR: ${DATA_PATH}/harmony_cache_gptoss
+HF_HOME: /tmp/hf_cache_gptoss
+HF_HUB_CACHE: /tmp/hf_cache_gptoss/hub
+TRANSFORMERS_CACHE: /tmp/hf_cache_gptoss
+XDG_CACHE_HOME: /tmp/hf_cache_gptoss

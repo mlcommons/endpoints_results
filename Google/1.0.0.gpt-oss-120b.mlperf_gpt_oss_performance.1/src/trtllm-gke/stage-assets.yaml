@@ -1,0 +1,264 @@
+# Stage the GPT-OSS-120B assets onto every A4X-max node's local SSD.
+#
+# GKE has no shared POSIX filesystem, so the `fs://` artifacts in the recipes
+# are hostPath mounts -- a window onto the node's own disk, not a fetch.
+# Everything the servers and the client read must already be on the node:
+#
+#   <node-local-ssd>/model-cache/gpt-oss-120b
+#   <node-local-ssd>/mlperf-data/gpt-oss/
+#       v4/perf/perf_eval_ref.parquet     performance dataset
+#       endpoint_accuracy/                accuracy dataset cache -- REQUIRED
+#                                         EVEN FOR A PERF-ONLY RUN, because the
+#                                         Slurm site template bind-mounts it
+#                                         unconditionally at the client's
+#                                         <node-mount>/inference-endpoint/dataset_cache
+#                                         AND the client (endpoints e9f427c,
+#                                         _load_datasets) loads all three
+#                                         accuracy datasets in every mode, so
+#                                         it must hold all three parquets --
+#                                         existing is not enough (see the
+#                                         verify step below)
+#       harmony_cache_gptoss/             Harmony tokenizer cache
+#                                         -> TIKTOKEN_RS_CACHE_DIR
+#
+# STAGE ON EVERY NODE, not just the 18 the run reserves.  Tasks are pinned by
+# node *index*; which physical machine index 0 is varies between runs, and
+# sflow picks its 18 nodes at run time.  On Kubernetes a missing fs:// path is
+# only a WARNING at plan time -- the run starts anyway and either fails late or,
+# worse, quietly benchmarks something else.
+#
+#   1. Fill in the SRC_* URIs in the ConfigMap below.
+#   2. kubectl apply -f stage-assets.yaml
+#   3. kubectl rollout status ds/stage-gptoss-assets --timeout=60m
+#      kubectl logs -l app=stage-gptoss-assets --tail=12 --prefix | sort
+#   4. Once EVERY node prints "STAGED: node ready":
+#      kubectl delete -f stage-assets.yaml
+#
+# To pick up files added to the DATA_PATH source later (e.g. the gated GPQA
+# cache), `kubectl rollout restart ds/stage-gptoss-assets`: the small data tree
+# is re-synced on every pod start; the checkpoint is skipped once marked.
+#
+# The DaemonSet copies once, prints its verdict, then idles so the pods stay
+# Ready and readable.  It holds no GPUs.
+#
+# ---------------------------------------------------------------------------
+# POPULATING THE SOURCES (do this once, on a network-enabled host)
+# ---------------------------------------------------------------------------
+# Model:      the openai/gpt-oss-120b checkpoint AND tokenizer.  The v1.0.2
+#             drop README pins revision b5c939de8f754692c1647ca79fbf85e8c1e70f8a,
+#             HF layout only (--exclude 'original/*' --exclude 'metal/*'),
+#             which is exactly what SRC_MODEL below holds (v1.0.1 pinned no
+#             revision).  Record the checksums you stage and keep them with the
+#             result.  Do not silently substitute another precision or model
+#             variant.
+#
+# Datasets:   follow NVIDIA/src/dataset/README.md#gpt-oss-120b.  GPQA is a
+#             GATED dataset: provision access before you start, and pre-populate
+#             endpoint_accuracy/ so the nodes never need egress.
+#             *** NEVER put an access token in this manifest, in a recipe, or in
+#             a launch log. *** Use a Kubernetes Secret or a pre-populated
+#             bucket instead; this DaemonSet deliberately reads only <bucket> /
+#             https:// URIs and no credentials.
+#
+# Harmony:    the GPT-OSS tokenizer needs the Harmony/tiktoken encodings, which
+#             are normally downloaded on first use.  Build the cache once with
+#             the helper shipped in the drop and stage the result:
+#
+#               CACHE_DIR=/tmp/harmony_cache_gptoss \
+#                 bash NVIDIA/src/sflow/tools/setup_harmony_cache.sh
+#               gcloud storage rsync --recursive /tmp/harmony_cache_gptoss \
+#                 <bucket><bucket>/mlperf-data/gpt-oss/harmony_cache_gptoss
+#
+#             If it is missing the servers fall back to TIKTOKEN_RS_CACHE_DIR
+#             =/tmp/tiktoken and will try the network; on an egress-less node
+#             that is a startup failure, not a slow start.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stage-gptoss-assets-src
+  namespace: default
+data:
+  # <bucket> prefix holding the openai/gpt-oss-120b checkpoint + tokenizer.  This
+  # bucket holds openai/gpt-oss-120b @ b5c939de8f754692c1647ca79fbf85e8c1e70f8a,
+  # HF-format files only (the repo's original/ and metal/ trees are excluded:
+  # trtllm-serve loads the HF layout).  The revision is in REVISION next to the
+  # weights; sha256s are in
+  # <bucket>/checksums/gpt-oss-120b.SHA256SUMS
+  SRC_MODEL: "<bucket>/models/gpt-oss-120b"
+  # <bucket> prefix holding the whole DATA_PATH tree (v4/, endpoint_accuracy/,
+  # harmony_cache_gptoss/).  Staging it as one tree keeps the three
+  # subdirectories consistent with each other.  Its PROVENANCE.txt records
+  # where every file came from.
+  SRC_DATA: "<bucket>/mlperf-data/gpt-oss"
+  # Minimum acceptable on-disk size for the checkpoint, in bytes.
+  #
+  # This guards a failure mode the .sflow-staged marker alone does NOT cover:
+  # the marker proves the *copy* finished, not that the *source* was complete.
+  # If the bucket is still filling, rsync faithfully mirrors a partial
+  # checkpoint, exits 0 and writes the marker -- poisoning the node cache with a
+  # truncated model that every later run then skips re-staging.
+  #
+  # gpt-oss-120b in its released MXFP4 form is ~65 GB (~62 GiB) across ~15
+  # safetensors shards plus tokenizer/config.  Set this from the size you
+  # actually measure after the first successful download, a little under it.
+  # Measured: 65276859525 B over 27 objects (including REVISION).
+  EXPECTED_MODEL_MIN_BYTES: "65000000000"
+  # Minimum acceptable size of the DATA_PATH tree.  Dominated by
+  # v4/perf/perf_eval_ref.parquet (192191924 B).  Measured: 196465648 B over 6
+  # objects WITHOUT the GPQA cache; it only grows when that is added.
+  EXPECTED_DATA_MIN_BYTES: "190000000"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: stage-gptoss-assets
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: stage-gptoss-assets
+  template:
+    metadata:
+      labels:
+        app: stage-gptoss-assets
+    spec:
+      # Deliberately every node in the pool, not just the 18 the run reserves.
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+      - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      - {key: kubernetes.io/arch, operator: Equal, value: arm64, effect: NoSchedule}
+      containers:
+      - name: stage
+        # MUST be multi-arch: these are arm64 GB300 nodes.  `google/cloud-sdk:slim`
+        # and every `google-cloud-cli:*-slim` tag publish an amd64-only manifest
+        # and crash-loop here with "exec format error".  `:stable` is
+        # amd64+arm64 and carries bash, curl and sha256sum.
+        image: <registry>/cloudsdktool/google-cloud-cli:stable
+        envFrom:
+        - configMapRef:
+            name: stage-gptoss-assets-src
+        command: ["bash", "-c"]
+        args:
+        - |
+          set -uo pipefail
+          MODELS=/model-cache
+          DATA=/mlperf-data
+          mkdir -p "${MODELS}" "${DATA}"
+
+          FAILED=0
+          fail() { echo "MISSING: $*"; FAILED=1; }
+
+          stage_dir() {  # <src-uri> <dest-dir> <label> <min-bytes>
+            local src="$1" dest="$2" label="$3" min="$4"
+            # A completion MARKER, not the presence of files.  An interrupted
+            # copy leaves plenty of files behind (config.json is small and lands
+            # early), so "some files exist" must never be read as "staged".
+            if [ -f "${dest}/.sflow-staged" ]; then
+              local have
+              have=$(du -sb "${dest}" 2>/dev/null | cut -f1)
+              if [ -n "${have}" ] && [ "${have}" -ge "${min}" ]; then
+                echo "STAGED (already complete): ${label} -> ${dest} (${have} B)"
+                return 0
+              fi
+              echo "WARN: ${label} is marked staged but is only ${have:-0} B (< ${min} B); restaging"
+              rm -f "${dest}/.sflow-staged"
+            fi
+            if [ -z "${src}" ] || [[ "${src}" == *REPLACE-ME* ]]; then
+              fail "${label}: ${dest} is not staged and no source URI was configured"
+              return 1
+            fi
+            echo "Copying ${label} from ${src} ... (resumable)"
+            if ! gcloud storage rsync --recursive "${src}" "${dest}"; then
+              fail "${label}: copy from ${src} failed (re-apply to resume)"
+              return 1
+            fi
+            # Size the result before declaring victory: rsync exits 0 after
+            # faithfully mirroring an INCOMPLETE source.
+            local got
+            got=$(du -sb "${dest}" 2>/dev/null | cut -f1)
+            if [ -z "${got}" ] || [ "${got}" -lt "${min}" ]; then
+              fail "${label}: staged ${got:-0} B but expected >= ${min} B -- source incomplete? NOT marking complete"
+              return 1
+            fi
+            touch "${dest}/.sflow-staged"
+            echo "STAGED: ${label} -> ${dest} ($(du -sh "${dest}" 2>/dev/null | cut -f1), ${got} B)"
+          }
+
+          stage_dir "${SRC_MODEL}" "${MODELS}/gpt-oss-120b" "gpt-oss-120b" "${EXPECTED_MODEL_MIN_BYTES}"
+          # The DATA_PATH tree is small (~200 MB) and gains files after the
+          # first stage -- the gated GPQA cache arrives once access is
+          # provisioned.  Honouring its marker would pin every node to the first
+          # snapshot, so it is re-synced on every pod start (rsync only copies
+          # what changed).  The 65 GB checkpoint keeps its marker.
+          rm -f "${DATA}/gpt-oss/.sflow-staged"
+          stage_dir "${SRC_DATA}"  "${DATA}/gpt-oss"        "gpt-oss DATA_PATH" "${EXPECTED_DATA_MIN_BYTES}"
+
+          # ---- verify the exact tree the recipes require --------------------
+          # A superset of the checks the benchmark task re-runs in-pod before it
+          # will start.  Failing here costs a kubectl logs; failing there costs
+          # an 18-node reservation.
+          #
+          # Parquet magic: the file starts and ends with "PAR1".  This catches
+          # a truncated or HTML-error-page "download" that `test -s` passes.
+          verify_parquet() {  # <path> <label>
+            local p="$1" label="$2" h t
+            if [ ! -s "${p}" ]; then
+              fail "${p} (${label})"
+              return 1
+            fi
+            h=$(head -c 4 "${p}")
+            t=$(tail -c 4 "${p}")
+            if [ "${h}" = "PAR1" ] && [ "${t}" = "PAR1" ]; then
+              echo "VERIFIED: ${label} has valid PAR1 magic ($(stat -c%s "${p}") B)"
+            else
+              echo "CORRUPT: ${p} is not a parquet file (head='${h}' tail='${t}')"
+              FAILED=1
+            fi
+          }
+
+          verify_parquet "${DATA}/gpt-oss/v4/perf/perf_eval_ref.parquet" "perf_eval_ref.parquet"
+
+          # Required even for MODE=perf -- see the header.  The benchmark task
+          # only checks that endpoint_accuracy/ EXISTS; the client then loads
+          # every accuracy dataset from it and tries to rebuild a missing one
+          # from the network.  GPQA is gated on HuggingFace, so a missing GPQA
+          # parquet kills the client at startup -- after the reservation and
+          # the weight load.
+          ACC="${DATA}/gpt-oss/endpoint_accuracy"
+          verify_parquet "${ACC}/aime25/aime25.parquet" "aime25 accuracy cache"
+          verify_parquet "${ACC}/gpqa/diamond/gpqa_diamond.parquet" "gpqa accuracy cache (GATED dataset, see the header)"
+          verify_parquet "${ACC}/livecodebench/release_v6/livecodebench_release_v6.parquet" "livecodebench accuracy cache"
+
+          if [ -d "${DATA}/gpt-oss/harmony_cache_gptoss" ] \
+             && [ "$(find "${DATA}/gpt-oss/harmony_cache_gptoss" -type f | wc -l)" -gt 0 ]; then
+            echo "VERIFIED: harmony_cache_gptoss/ present ($(find "${DATA}/gpt-oss/harmony_cache_gptoss" -type f | wc -l) files)"
+          else
+            fail "${DATA}/gpt-oss/harmony_cache_gptoss -- populate it with NVIDIA/src/sflow/tools/setup_harmony_cache.sh on a network-enabled host"
+          fi
+
+          # The tokenizer lives with the checkpoint and the client needs it too.
+          for f in config.json tokenizer_config.json; do
+            [ -f "${MODELS}/gpt-oss-120b/${f}" ] || fail "gpt-oss-120b/${f}"
+          done
+
+          if [ "${FAILED}" = 0 ]; then
+            echo "STAGED: node ready"
+          else
+            echo "NOT READY: fix the above before running any recipe"
+          fi
+          sleep infinity
+        volumeMounts:
+        - {name: model-cache, mountPath: /model-cache}
+        - {name: mlperf-data, mountPath: /mlperf-data}
+        resources:
+          requests: {cpu: "500m", memory: 1Gi}
+      volumes:
+      - name: model-cache
+        hostPath:
+          path: <node-local-ssd>/model-cache
+          type: DirectoryOrCreate
+      - name: mlperf-data
+        hostPath:
+          path: <node-local-ssd>/mlperf-data
+          type: DirectoryOrCreate

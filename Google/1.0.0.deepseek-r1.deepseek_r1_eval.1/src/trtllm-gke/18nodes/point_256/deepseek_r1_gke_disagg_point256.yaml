@@ -1,0 +1,1720 @@
+version: "0.1"
+
+# ============================================================================
+# DeepSeek-R1 -- MLPerf Endpoints v1.0.2, point C256 (disaggregated) on
+# GKE A4X-max (GB300 NVL72).
+# ============================================================================
+#
+# GENERATED FILE -- edit ../../generate_point_recipes.py and re-run. The GKE layer
+# lives in exactly one place (that script's RECIPE_TEMPLATE) so a fix here
+# propagates to all twelve points instead of being hand-copied eleven times.
+#
+# GKE port of the NVIDIA Slurm recipe:
+#   nv-mlpinf-partner-partner-endpoints-v1.0.2/NVIDIA/src/deepseek-r1/
+#     configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_256/
+#       dsr1_config.yaml   topology (below)
+#       server-ctx.yaml    pasted verbatim into EOF_CTX
+#       server-gen.yaml    pasted verbatim into EOF_GEN
+#       client.yaml        emitted verbatim as the CLIENT_CONFIG artifact
+#       server-env.yaml    runtime flags kept in the GKE layer; UCX_* replaced
+#       endpoint_env.yaml  client cache dirs, exported verbatim (benchmark)
+#     configs/_shared/templates/trtllm_disagg_endpoints_dsr1_perf_acc.yaml
+#                          task graph (snapshot_configs / servers / frontends /
+#                          lcb_service / endpoint_benchmark)
+#     configs/_shared/slurm_env.yaml   site paths + images -- DISCARDED
+#
+# CHECKPOINT (v1.0.2 README pin, the same for every point):
+#   centml/DeepSeek-R1-NVFP4-v2-mlpinf@93947a0d7bd04f73ff98636f6b18ff5839e7aaf9
+# staged per node into MODEL_PATH by ../../stage-assets.yaml. It is NOT the
+# v1.0.1 checkpoint (nvidia/DeepSeek-R1-NVFP4); results from the two are not
+# comparable.
+#
+# Ported per ../../../../SLURM_TO_GKE.md. The split that matters:
+#
+#   MODEL / WORKLOAD half -- COPIED VERBATIM from the drop:
+#     every line inside EOF_CTX / EOF_GEN, the whole CLIENT_CONFIG artifact,
+#     the topology variables, the concurrency and sample counts. These are
+#     NVIDIA's certified numbers. Do not re-tune them.
+#
+#   FABRIC / LAUNCHER half -- REPLACED with the GKE compatibility layer:
+#     srun + Pyxis/Enroot        -> kubernetes backend + MPI operator
+#     --segment=N NVLink place.  -> compute_domain: {create: true}   (MNNVL)
+#     RoCE/IB NCCL + UCX rc_x    -> rdma: disable + UCX cuda_ipc/MNNVL
+#     shared Lustre/NFS          -> node-local SSD hostPath (see Staging)
+#     shared-FS URL handshake    -> CTX_URLS / GEN_URLS / FRONTEND_URLS
+#     ${SFLOW_TASK_OUTPUT_DIR}   -> durable hostPath ${REPORT_DIR}
+#
+# Porting the fabric half FROM Slurm is the single biggest time sink: those
+# settings are correct on a RoCE cluster, wrong here, and they fail SILENTLY --
+# a healthy server, zero errors, and up to 10x less throughput.
+#
+# TOPOLOGY (identical to Slurm point_256):
+#   2 ctx x DEP4 + 2 gen x DEP32
+#     = 8 + 64 = 72 GPUs = 18 nodes (a full NVL72).
+#   ctx servers -> node(s) 0-1; gen server i -> nodes 2-9, 10-17
+#
+# BEFORE YOU RUN -- on EVERY node of the pool (see ../../README.md §3):
+#   kubectl apply -f ../../stage-assets.yaml      # model + eval parquet
+#   kubectl apply -f ../../mk-report-dir.yaml     # durable report hostPath
+#   kubectl apply -f ../../prepull-images.yaml    # optional but recommended
+# On Kubernetes a missing fs:// path is only a WARNING at plan time -- the run
+# starts anyway and the benchmark silently falls back to a synthetic dataset.
+# The benchmark task below hard-fails instead; confirm from the log regardless.
+# ============================================================================
+
+variables:
+  # ---------------------------------------------------------------------
+  # POINT TOPOLOGY -- verbatim from point_256/dsr1_config.yaml.
+  # ---------------------------------------------------------------------
+  NUM_CTX_SERVERS:
+    description: "Prefill (context) server replicas."
+    type: integer
+    value: 2
+  GPUS_PER_CTX_RANK:
+    description: "GPUs per prefill replica == its TP/EP size."
+    type: integer
+    value: 4
+  NUM_GEN_SERVERS:
+    description: "Decode (generation) server replicas."
+    type: integer
+    value: 2
+  GPUS_PER_GEN_RANK:
+    description: "GPUs per decode replica == its TP/EP size."
+    type: integer
+    value: 32
+  NUM_FRONTEND_SERVERS:
+    description: "trtllm-serve disaggregated frontends (Slurm: 4)."
+    type: integer
+    value: 4
+  BASE_PORT:
+    description: "ctx server i listens on BASE_PORT+i; gen server i on BASE_PORT+NUM_CTX_SERVERS+i."
+    type: integer
+    value: 30000
+  FRONTEND_PORT:
+    description: "Frontend replica i listens on FRONTEND_PORT+i."
+    type: integer
+    value: 8000
+
+  # ---------------------------------------------------------------------
+  # NODE MATH -- conversion spec §2, verified against
+  # sflow/app/resource_planner.py.
+  #
+  #   gpus.count <= gpus_per_node  -> the planner takes the first contiguous
+  #       free GPU run on the first node that has one, so sub-node servers
+  #       tightly BACKFILL, including across the ctx->gen boundary.
+  #   gpus.count >  gpus_per_node  -> requires count % gpus_per_node == 0 and
+  #       picks whole free nodes.
+  #
+  # For DeepSeek-R1 ctx is always exactly 8 GPUs = 2 whole nodes and gen TP is
+  # always >= 16, so ctx lands on nodes 0-1 and gen server i starts at
+  # node 2 + i*(genTP/4). The CTX_URLS / GEN_URLS artifacts below still
+  # implement the GENERAL packing-aware formula, because the naive
+  # `ceil(ctx_gpus / gpus_per_node)` form is wrong the moment a gen server
+  # becomes smaller than a node (it is wrong today for GPT-OSS point_35/70/140)
+  # and a wrong gen node index does not fail -- it just points every frontend
+  # at a host that is not serving.
+  # ---------------------------------------------------------------------
+  GPUS_PER_NODE:
+    description: "A4X-max / GB300 NVL72: 4 GPUs per host."
+    type: integer
+    value: 4
+  SERVER_NODES:
+    description: "ceil(72 GPUs / 4) -- the nodes the servers occupy."
+    type: integer
+    value: 18
+  CLIENT_RESERVE_NODES:
+    description: >-
+      Extra nodes reserved for the client, held out beyond the server nodes.
+
+      The v1.0.2 drop removed CLIENT_RESERVE_GPUS (v1.0.1 set 8 on
+      C8192/C16384/C28080 to give the Slurm client its own node), so every
+      Slurm point now allocates exactly ceil(TOTAL_GPUS / 4) = 18 nodes and its
+      endpoints client shares a host with a server rank -- the same placement
+      GKE always used: the client is a CPU-only pod under host_network and the
+      proven point_256 run co-scheduled it on node 0 with ctx server 0 at
+      45,760 tok/s. So the default is 0 and the allocation stays at
+      18 nodes, i.e. exactly the 18-node pool.
+
+      `-s CLIENT_RESERVE_NODES=N` gives the client N node(s) of its own (this
+      is NOT the Slurm allocation, and needs 18+N nodes); the benchmark and
+      lcb_service tasks then move to node 18.
+    type: integer
+    value: 0
+  TOTAL_NODES:
+    type: integer
+    value: ${{ variables.SERVER_NODES + variables.CLIENT_RESERVE_NODES }}
+  BENCH_NODE_INDEX:
+    description: >-
+      Node index for the CPU-only client + LCB + snapshot_configs pods: 0 when
+      CLIENT_RESERVE_NODES == 0 (shares node 0 with prefill server 0, leaving
+      the synchronous multi-node decode collective on nodes 2..17 completely
+      undisturbed), or SERVER_NODES (the first reserved client node) when
+      CLIENT_RESERVE_NODES > 0.
+    type: integer
+    value: ${{ variables.SERVER_NODES if variables.CLIENT_RESERVE_NODES > 0 else 0 }}
+
+  # ---------------------------------------------------------------------
+  # GKE SITE -- replaces configs/_shared/slurm_env.yaml.
+  # ---------------------------------------------------------------------
+  K8S_NAMESPACE:
+    value: default
+  GKE_NODEPOOL:
+    description: "cloud.google.com/gke-nodepool selector for the A4X-max pool."
+    value: <nodepool>
+  COMPUTE_DOMAIN_CHANNEL:
+    value: auto
+
+  MODEL_PATH:
+    description: >-
+      DeepSeek-R1 NVFP4 checkpoint + tokenizer, on each node's local SSD. v1.0.2
+      pins centml/DeepSeek-R1-NVFP4-v2-mlpinf@93947a0d7bd04f73ff98636f6b18ff5839e7aaf9
+      (Slurm MODEL_PATH ${SCRATCH_DIR}/models/DeepSeek-R1-NVFP4-v2; v1.0.1 used
+      .../deepseek-r1/fp4-quantized-modelopt/deepseek_r1-torch-fp4, a different
+      checkpoint). GKE has no shared FS, so it is staged per node by
+      ../../stage-assets.yaml (DaemonSet stage-dsr1-v2-assets), which writes the
+      revision into MODEL_PATH/.sflow-staged. The v1.0.1 checkpoint stays in
+      model-cache/DeepSeek-R1-NVFP4 next to it; do not point v1.0.2 runs at it.
+    value: <node-local-ssd>/model-cache/DeepSeek-R1-NVFP4-v2
+  DATA_PATH:
+    description: >-
+      Official MLPerf DSR1 eval parquet (Slurm DATA_PATH; v1.0.2 moved the Slurm
+      default to ${SCRATCH_DIR}/data/deepseek_r1_eval.parquet, same file, same
+      node-local path here). Used for BOTH the
+      `dsr1-perf` performance dataset and the `deepseek_r1_accuracy` dataset in
+      client.yaml. NOT cosmetic: on the synthetic fallback, MTP acceptance
+      collapsed from ~2.58 to 2.03 of 4 tokens per step and throughput read
+      38.2k instead of 45.8k with no config change. A run on the wrong dataset
+      cannot be compared to a Slurm number in either direction.
+    value: <node-local-ssd>/mlperf-data/deepseek_r1_eval.parquet
+
+  MODE:
+    description: >-
+      perf | acc | both -- passed to `inference-endpoint benchmark --mode`.
+
+      The Slurm point sets MODE=both. Default is `both` so every
+      submission run executes both performance and accuracy unless explicitly
+      overridden with `-s MODE=perf`.
+    value: both
+  WITH_LCB:
+    description: >-
+      Start the LiveCodeBench service (true|false).
+
+      Both Slurm templates launch lcb_service in EVERY mode, including perf, and
+      the DSR1 README says to provide all three images. It is ported here as a
+      CPU-only task pinned to the client's node; with host_network: true the
+      client reaches it on localhost:13835, matching Slurm exactly.
+
+      Set false only if the LCB image is unavailable at your site. The task then
+      runs a placeholder on an image that is already present (see the `lcb`
+      operator below) so the dependency graph is unchanged. Do not set false for
+      an accuracy submission run.
+    value: "true"
+
+  TRTLLM_IMAGE:
+    description: >-
+      Server / frontend image. This is the tag the endpoints v1.0.2 drop
+      certifies (point_256/dsr1_config.yaml CONTAINER_IMAGE, unchanged from
+      v1.0.1); its arm64
+      manifest is sha256:e71eb8056ac1c717e6b727f9d66ebba9442e95f7ebc3514007b541046e84b088.
+
+      FALLBACK, known to work with the runtime patches below:
+        nvcr.io/nvidia/ai-dynamo/tensorrtllm-runtime:1.3.0-deepseek-v4-dev.1
+      That is the image the 45,760 tok/s point_256 GKE run actually used. If
+      1.3.0rc14 misbehaves, try it before debugging anything else.
+
+      IMPORTANT: the hang_detector patch and the four frontend `sed` patches
+      below are pinned to this image's python layout
+      (/usr/local/lib/python3.12/dist-packages/tensorrt_llm/...). They are all
+      `|| true`, so a wrong path is SILENT -- each one echoes a
+      "GKE_PATCH missing" line instead, grep for it after an image change.
+    value: nvcr.io/nvidia/tensorrt-llm/release:1.3.0rc14
+  CLIENT_IMAGE:
+    description: >-
+      MLCommons Endpoints client, ENDPOINT_CONTAINER_IMAGE from the drop. This
+      is Endpoints commit e9f427ce74fd90e7fafdbc77ee7746cc00245692 -- RECORD IT
+      WITH THE RESULT, MLPerf requires the client revision.
+
+      ghcr.io is often unreachable from GKE nodes; mirror it and override:
+        crane copy ghcr.io/mlcommons/endpoints:e9f427c \
+          <registry>/<proj>/<repo>/endpoints-client:e9f427c
+        ./launch_test.sh -s CLIENT_IMAGE=<that image>
+      It MUST be the arm64 manifest; an amd64-only image crash-loops on these
+      nodes with "exec format error".
+    value: ghcr.io/mlcommons/endpoints:e9f427c
+  LCB_IMAGE:
+    description: "LCB_CONTAINER_IMAGE from the drop. Mirror it like CLIENT_IMAGE."
+    value: ghcr.io/mlcommons/endpoints:9d749906-livecodebench
+  LCB_PORT:
+    description: "uvicorn port from the Slurm template. The client expects 13835 on localhost."
+    type: integer
+    value: 13835
+
+  METRICS_TOKENIZER_WORKERS:
+    description: >-
+      GKE addition -- see the long comment in the CLIENT_CONFIG artifact.
+      NVIDIA's value for this point is unset (client default).
+    type: integer
+    value: 32
+
+artifacts:
+  # ---------------------------------------------------------------------
+  # Server URL handshake.
+  #
+  # Slurm has each server's rank 0 append its host:port to a file on shared
+  # storage and the frontends read it back. GKE has no shared filesystem, so
+  # the addresses are computed up front from the reserved node IPs using the
+  # packing-aware node math (conversion spec §2).
+  # ---------------------------------------------------------------------
+  - name: CTX_URLS
+    uri: <workdir>
+    content: |
+      {# ctx server i is always tightly packed from GPU 0. The `i *` is
+         load-bearing: GPUS_PER_CTX_RANK // GPUS_PER_NODE alone is 0 for a
+         TP2 server and collapses every ctx replica onto node 0. #}
+      {% for i in range(variables.NUM_CTX_SERVERS) %}
+      ${{ backends.k8s_cluster.nodes[(i * variables.GPUS_PER_CTX_RANK) // variables.GPUS_PER_NODE].ip_address }}:${{ variables.BASE_PORT + i }}
+      {% endfor %}
+  - name: GEN_URLS
+    uri: <workdir>
+    content: |
+      {# gen_base: a sub-node gen server BACKFILLS the ctx servers' leftover
+         GPUs (planner takes the first contiguous free run); a multi-node one
+         must start on a whole-node boundary. Jinja has no ceil, hence the
+         (x + n - 1) // n form. For DSR1 gen TP is always >= 16 so this always
+         evaluates to the ceil branch, but the general form keeps the template
+         correct for any future point. #}
+      {% set ctx_gpus = variables.NUM_CTX_SERVERS * variables.GPUS_PER_CTX_RANK %}
+      {% set gen_base = ctx_gpus if variables.GPUS_PER_GEN_RANK <= variables.GPUS_PER_NODE else ((ctx_gpus + variables.GPUS_PER_NODE - 1) // variables.GPUS_PER_NODE) * variables.GPUS_PER_NODE %}
+      {% for i in range(variables.NUM_GEN_SERVERS) %}
+      ${{ backends.k8s_cluster.nodes[(gen_base + i * variables.GPUS_PER_GEN_RANK) // variables.GPUS_PER_NODE].ip_address }}:${{ variables.BASE_PORT + variables.NUM_CTX_SERVERS + i }}
+      {% endfor %}
+  - name: FRONTEND_URLS
+    uri: <workdir>
+    content: |
+      {# Conversion spec §8: place frontend replicas across the prefill nodes
+         (0..ctx_full_nodes-1) so all decode_server nodes (nodes 2..17) stay
+         100% free of frontend_server CPU/network interrupt overhead. #}
+      {% set ctx_full_nodes = (variables.NUM_CTX_SERVERS * variables.GPUS_PER_CTX_RANK) // variables.GPUS_PER_NODE %}
+      {% for i in range(variables.NUM_FRONTEND_SERVERS) %}
+      ${{ backends.k8s_cluster.nodes[i % ctx_full_nodes].ip_address }}:${{ variables.FRONTEND_PORT + i }}
+      {% endfor %}
+
+  # ---------------------------------------------------------------------
+  # CLIENT_CONFIG -- point_256/client.yaml, emitted VERBATIM.
+  #
+  # Deliberately NOT synthesised in Python from a handful of extracted values,
+  # which is what the older DSR1 GKE template did. Emitting the file verbatim
+  # is what preserves `submission_ref` (the MLPerf ruleset id), the
+  # `deepseek_r1_accuracy` dataset and its legacy_mlperf_deepseek_r1 evaluator,
+  # and this point's own `timeouts` / `warmup` blocks -- all of which a
+  # hand-rolled dict silently drops.
+  #
+  # ${VAR} placeholders are expanded by the Endpoints client at load time from
+  # the task environment, exactly as on Slurm. ${{ }} is resolved by sflow.
+  # Only two lines differ from the drop, both marked GKE EDIT/ADDITION.
+  # ---------------------------------------------------------------------
+  - name: CLIENT_CONFIG
+    uri: <workdir>
+    content: |
+      name: deepseek-r1-c256
+      version: '1.0'
+      type: submission
+      benchmark_mode: online
+      submission_ref:
+        model: deepseek-r1
+        ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+      model_params:
+        name: ${MODEL_PATH}
+        tokenizer_name: ${MODEL_PATH}
+        temperature: 0.0
+        top_p: 1.0
+        # GKE ADDITION (seed-runtime-match, §4.6 / §2.1.1): MLCommons seed set A
+        # (cohort 2026-10-C1) requires model_seed = 9315206023656308754.
+        seed: 9315206023656308754
+        max_new_tokens: 20000
+        streaming: 'on'
+      datasets:
+      - name: dsr1-perf
+        type: performance
+        path: ${DATA_PATH}
+      - name: deepseek_r1_accuracy
+        type: accuracy
+        path: ${DATA_PATH}
+        accuracy_config:
+          eval_method: legacy_mlperf_deepseek_r1
+          ground_truth: ground_truth
+          num_repeats: 1
+          extras:
+            subset_column: dataset
+            question_column: question
+            tokenizer_path: ${MODEL_PATH}
+      settings:
+        runtime:
+          n_samples_to_issue: 21940
+        load_pattern:
+          type: concurrency
+          target_concurrency: 256
+        client:
+          num_workers: 8
+          warmup_connections: 0
+          min_required_connections: 0
+          worker_initialization_timeout: 300.0
+        # ---------------------------------------------------------------------
+        # GKE ADDITION -- not a Slurm value.
+        #
+        # After the load phase the client tokenizes every response to compute
+        # OSL / TPS / TPOT. That stage is SILENT: it prints nothing until it
+        # finishes. On Kimi-K3 C192 the default worker count turned this into
+        # 2 h 05 m of log silence, `kubectl logs` stalled for 7,474 s, sflow's
+        # collect sentinel could never be delivered, and the ENTIRE report was
+        # lost after a flawless benchmark. 32 cuts it roughly 8x.
+        #
+        # The benchmark pod has 144 CPUs and is otherwise idle here, so a low
+        # value is simply leaving the machine unused.
+        #
+        # NVIDIA's own value for this point: unset (client default). Restore it with
+        # `-s METRICS_TOKENIZER_WORKERS=<n>` if you need byte-parity with Slurm;
+        # it changes only post-processing speed, never the measured tokens.
+        # ---------------------------------------------------------------------
+        metrics_tokenizer_workers: ${{ variables.METRICS_TOKENIZER_WORKERS }}
+      endpoint_config:
+        endpoints: []
+        api_type: openai_completions
+        api_key: null
+      # GKE EDIT (conversion spec §5, fix 3): report_dir moved off the pod.
+      # Slurm writes to ${SFLOW_TASK_OUTPUT_DIR}, which on Kubernetes is an emptyDir
+      # that dies with the pod and is only recovered through sflow's EXIT-trap +
+      # log-sentinel channel. That channel has failed twice in this cluster (once to
+      # `exec` destroying the trap, once to a stalled log stream) AFTER a perfect
+      # benchmark. ${REPORT_DIR} is a per-run directory on the node's local SSD,
+      # exported by the benchmark task; the bytes survive regardless.
+      report_dir: ${REPORT_DIR}
+
+  # ---------------------------------------------------------------------
+  # Host mounts. fs:// is a hostPath mount, NOT a fetch: nothing is copied,
+  # the bytes must already be on the node (../../stage-assets.yaml).
+  # ---------------------------------------------------------------------
+  - name: MODEL_CACHE
+    uri: fs://${{ variables.MODEL_PATH }}
+  - name: MLPERF_DATA
+    uri: fs://<node-local-ssd>/mlperf-data
+  - name: NVIDIA_DRIVER_LIB
+    uri: <workdir>/bin/nvidia/lib64
+  - name: IMEX_CHANNELS
+    uri: fs:///dev/nvidia-caps-imex-channels
+  # Durable results (conversion spec §5, fix 3). sflow's normal path --
+  # emptyDir + EXIT trap + a sentinel printed to the pod log -- lost a
+  # completed report twice in the Kimi-K3 sweep:
+  #   C24  `exec` replaced the shell and destroyed the EXIT trap.
+  #   C192 the client went silent for 2 h 05 m during its tokenization drain,
+  #        `kubectl logs` stalled for 7,474 s, the sentinel was never
+  #        delivered, and the emptyDir died with the pod.
+  # Both times the benchmark itself was flawless. Writing to the node's local
+  # SSD depends on none of that machinery.
+  #
+  # Must be pre-created on every node (../../mk-report-dir.yaml): sflow mounts
+  # fs:// with a strict `Directory` type, so kubelet refuses the pod rather
+  # than silently creating an empty dir.
+  - name: REPORTS_DIR
+    uri: fs://<node-local-ssd>/dsr1-reports
+
+operators:
+  # ---------------------------------------------------------------------
+  # TWO MPI operators, not one (conversion spec §2).
+  #
+  # slots_per_worker must match the POD's GPU count, not the node's. A single
+  # shared operator hardcoding GPUS_PER_NODE makes a 4-GPU ctx pod advertise 4
+  # MPI slots, and mpirun then over-subscribes ranks onto GPUs the pod does not
+  # own. min(TP, GPUS_PER_NODE) is the correct value for both roles.
+  # ---------------------------------------------------------------------
+  - name: mpi_trtllm_ctx
+    type: k8s_mpi
+    image: ${{ variables.TRTLLM_IMAGE }}
+    shm_size: 64Gi
+    run_as_root: true
+    security_context:
+      privileged: true
+    mpi:
+      route: auto
+      slots_per_worker: ${{ [variables.GPUS_PER_CTX_RANK, variables.GPUS_PER_NODE] | min }}
+      run_launcher_as_worker: true
+      launcher_creation_policy: WaitForWorkersReady
+      ssh_port: 2222
+      ensure_sshd: true
+  - name: mpi_trtllm_gen
+    type: k8s_mpi
+    image: ${{ variables.TRTLLM_IMAGE }}
+    shm_size: 64Gi
+    run_as_root: true
+    security_context:
+      privileged: true
+    mpi:
+      route: auto
+      slots_per_worker: ${{ [variables.GPUS_PER_GEN_RANK, variables.GPUS_PER_NODE] | min }}
+      run_launcher_as_worker: true
+      launcher_creation_policy: WaitForWorkersReady
+      ssh_port: 2222
+      ensure_sshd: true
+  # CPU-only trtllm pod: the disaggregated frontends and snapshot_configs.
+  - name: trtllm_k8s
+    type: k8s
+    image: ${{ variables.TRTLLM_IMAGE }}
+    shm_size: 16Gi
+    run_as_root: true
+    security_context:
+      privileged: true
+  - name: client
+    type: k8s
+    image: ${{ variables.CLIENT_IMAGE }}
+    shm_size: 16Gi
+    run_as_root: true
+  - name: lcb
+    type: k8s
+    # WITH_LCB=false falls back to the client image rather than skipping the
+    # task: sflow has no conditional-task construct, so the task always exists
+    # and the DAG never changes shape. Reusing an image the run already needs
+    # means a disabled LCB costs no extra pull and cannot ImagePullBackOff on a
+    # site that has no access to the LCB registry -- which is the entire reason
+    # the switch exists.
+    image: ${{ variables.LCB_IMAGE if variables.WITH_LCB == 'true' else variables.CLIENT_IMAGE }}
+    shm_size: 16Gi
+    run_as_root: true
+
+backends:
+  - name: k8s_cluster
+    type: kubernetes
+    default: true
+    namespace: ${{ variables.K8S_NAMESPACE }}
+    # 18 node(s) of servers (8 ctx + 64 gen GPUs). Slurm SLURM_NODES = 18.
+    nodes: ${{ variables.TOTAL_NODES }}
+    gpus_per_node: ${{ variables.GPUS_PER_NODE }}
+    # pod IP == node IP, so CTX_URLS / GEN_URLS / FRONTEND_URLS (computed from
+    # the reserved node InternalIPs) are reachable, and the client can talk to
+    # lcb_service on localhost:13835 exactly as it does under Slurm.
+    host_network: true
+    host_ipc: true
+    scheduling: device_plugin
+    node_selector:
+      cloud.google.com/gke-nodepool: ${{ variables.GKE_NODEPOOL }}
+    # A4X-max on GKE publishes no usable in-pod RDMA NIC: nvidia_peermem is not
+    # visible (no GPUDirect RDMA) and this image's HPC-X nccl_rdma_sharp_plugin
+    # fails to dlopen ("libmlx5.so.1: version MLX5_1.25 not found"), so NCCL was
+    # falling back to NET/IB over RoCE with no rail pinning. `disable` sets
+    # NCCL_IB_DISABLE=1 / NCCL_IBEXT_DISABLE=1 / NCCL_NET_PLUGIN=none and stops
+    # the probe. Cross-node NVLink (MNNVL) is P2P, NOT a NET transport, so it is
+    # unaffected -- on the proven point_256 run 1792 of 1792 channels stayed on
+    # P2P/MNNVL.
+    #
+    # Do NOT add an mrdma.google.com ResourceClaim or the gIB NCCL plugin: gIB
+    # accelerates NCCL's NETWORK path and inside one NVL72 domain there is no
+    # NCCL network traffic to accelerate. The KV path is UCX, which cannot load
+    # a NCCL plugin at all.
+    rdma: disable
+    # The NVLink ComputeDomain -- the GKE replacement for Slurm's --segment=N,
+    # and what actually makes MNNVL work across the 18 nodes.
+    compute_domain:
+      create: true
+    tolerations:
+      - key: "kubernetes.io/arch"
+        operator: "Equal"
+        value: "arm64"
+        effect: "NoSchedule"
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+    reservation:
+      timeout: 1800
+    # Result collection sizing (conversion spec §5, fix 4). sflow's default
+    # per-file cap is 10 MiB and anything above it is skipped with only a
+    # "sflow: NOT syncing large output file back to driver" line -- the run
+    # still reports success. Measured on the Kimi-K3 C96 run, the client's own
+    # report/scores.json tripped exactly this and the collected report had no
+    # per-sample detail at all.
+    #
+    # 1Gi is chosen, not arbitrary: far above scores.json (tens of MB) and far
+    # below events.jsonl (multi-GB), so the useful file is kept and the giant
+    # one is still excluded -- dragging a multi-GB events.jsonl through
+    # `kubectl cp` inside the grace window risks a mid-copy teardown, which is
+    # a worse failure than skipping it.
+    collect_max_file_size: 1Gi
+    # Default 120 s bounds BOTH the pod's post-run hold and the driver-side
+    # copy. A larger cap means more to move; the pod exits as soon as the copy
+    # finishes, so a large value costs nothing on a fast copy.
+    collect_grace_seconds: 900
+
+workflow:
+  # v1.0.2: renamed from dsr1_endpoints_v1_0_1_disagg_gke so run ids and
+  # report dirs of the two drops (different checkpoints) never mix.
+  name: dsr1_endpoints_v1_0_2_disagg_gke
+  tasks:
+    # =====================================================================
+    # snapshot_configs -- ported from the Slurm template's task of the same
+    # name. The DSR1 README requires keeping snapshot_configs/ with the run
+    # output, so the resolved server and client configs travel with the result.
+    #
+    # On Slurm these are files on shared storage and it just `cp`s them. Here
+    # the server configs are heredocs inside the server tasks, so the same
+    # bytes are written again below. They cannot drift: both copies are emitted
+    # from the same Slurm file by generate_point_recipes.py, and `--check`
+    # diffs BOTH against the drop.
+    #
+    # v1.0.2's Slurm snapshot also copies site-env.yaml when SITE_ENV_YAML is
+    # set. It defaults to '' (asserted by the generator) and the GKE
+    # compatibility layer in the server tasks is this port's site overlay, so
+    # there is no extra file to snapshot.
+    # =====================================================================
+    - name: snapshot_configs
+      operator: trtllm_k8s
+      resources:
+        nodes:
+          indices: ["${{ variables.BENCH_NODE_INDEX }}"]
+      script:
+        - set -euo pipefail
+        - mkdir -p "${SFLOW_TASK_OUTPUT_DIR}"
+        - |
+          cat << 'EOF_SNAP_CTX' > "${SFLOW_TASK_OUTPUT_DIR}/server-ctx.yaml"
+          # ----------------------------------------------------------------------------
+          # server-ctx.yaml -- VERBATIM from the NVIDIA Slurm drop
+          #   .../deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_256/server-ctx.yaml
+          # apart from the two mandatory GKE edits marked "GKE EDIT" below. Do not
+          # re-tune anything here: these are NVIDIA's certified numbers for this point.
+          #
+          # ctx runs DEP4 (tensor_parallel_size = moe_expert_parallel_size = 4).
+          # cuda_graph_config stays null and that is CORRECT for prefill: it batches
+          # ~16k tokens per step, so kernel-launch overhead is noise and eager is right.
+          # Graphs are only mandatory on the decode path (see server-gen.yaml).
+          # ----------------------------------------------------------------------------
+          backend: pytorch
+          tensor_parallel_size: 4
+          moe_expert_parallel_size: 4
+          enable_attention_dp: true
+          pipeline_parallel_size: 1
+          max_batch_size: 128
+          max_num_tokens: 16384
+          max_seq_len: 23140
+          # GKE EDIT: disable per-iteration CUDA event sync and stdout log formatting
+          # in PyExecutor.profile_step() (matching gpt-oss-120b). enable_iter_perf_stats
+          # and enable_iter_req_stats stay false as in the Slurm drop (when true, they
+          # invoke torch.cuda.mem_get_info() and _populate_req_stats() on every decode
+          # step across all 64 DEP64 ranks).
+          print_iter_log: false
+          enable_iter_perf_stats: false
+          enable_iter_req_stats: false
+          cuda_graph_config: null
+          disable_overlap_scheduler: true
+          kv_cache_config:
+            enable_block_reuse: false
+            free_gpu_memory_fraction: 0.85
+            dtype: fp8
+          moe_config:
+            backend: TRTLLM
+          nvfp4_gemm_config:
+            allowed_backends:
+            - cutlass
+            - cublaslt
+            - cutedsl
+            - cuda_core
+          cache_transceiver_config:
+            max_tokens_in_buffer: 16384
+            backend: UCX
+            # GKE EDIT (conversion spec §3.3): KV transfer timeouts. The Slurm drop
+            # leaves these at the TRT-LLM defaults, which assume a RoCE fabric that
+            # hands off in single-digit ms. On GKE the ctx->gen hop is UCX cuda_ipc
+            # over MNNVL and the first transfer of a run also pays ComputeDomain
+            # channel setup; the default window expires mid-handshake and the
+            # request fails with a KV transfer timeout while both servers stay
+            # 'healthy'. Present in the proven 45,760 tok/s point_256 recipe.
+            kv_transfer_timeout_ms: 120000
+            kv_transfer_sender_future_timeout_ms: 10000
+          scheduler_config:
+            capacity_scheduler_policy: MAX_UTILIZATION
+            context_chunking_policy: FIRST_COME_FIRST_SERVED
+          speculative_config:
+            decoding_type: MTP
+            num_nextn_predict_layers: 3
+            max_concurrency: 16384
+        - EOF_SNAP_CTX
+        - |
+          cat << 'EOF_SNAP_GEN' > "${SFLOW_TASK_OUTPUT_DIR}/server-gen.yaml"
+          # ----------------------------------------------------------------------------
+          # server-gen.yaml -- VERBATIM from the NVIDIA Slurm drop
+          #   .../deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_256/server-gen.yaml
+          # apart from the two mandatory GKE edits marked "GKE EDIT" below.
+          #
+          # gen runs DEP32 at C=128 per replica.
+          #
+          # CUDA GRAPHS: checked, and NOT touched. Conversion spec §3.1 says to replace
+          # `cuda_graph_config: null` with an explicit batch_sizes ladder -- that edit is
+          # NOT needed in the endpoints v1.0.2 drop. Every one of the twelve
+          # server-gen.yaml files already ships an explicit
+          #   cuda_graph_config: {enable_padding: true, batch_sizes: [...]}
+          # ladder covering 1..max_batch_size, so the batch_sizes list below is NVIDIA's,
+          # byte-for-byte, not ours. (This is the single biggest trap in the port: the
+          # older DSR1 drop had null here on point_256 and running eager measured 177 ms
+          # per decode step vs 13.6 ms with graphs -- ~3.3k tok/s instead of ~45.8k, with
+          # no error and a perfectly healthy-looking server.) If a future drop
+          # reintroduces null, `--check` will still pass but the run will be 13x slow:
+          # grep the log for "Creating CUDA graph instances" (README check 2).
+          # ----------------------------------------------------------------------------
+          backend: pytorch
+          tensor_parallel_size: 32
+          moe_expert_parallel_size: 32
+          enable_attention_dp: true
+          enable_lm_head_tp_in_adp: true
+          pipeline_parallel_size: 1
+          max_batch_size: 4
+          max_num_tokens: 16
+          max_seq_len: 23140
+          # GKE EDIT: disable per-iteration CUDA event sync and stdout log formatting
+          # in PyExecutor.profile_step() (matching gpt-oss-120b). enable_iter_perf_stats
+          # and enable_iter_req_stats stay false as in the Slurm drop (when true, they
+          # invoke torch.cuda.mem_get_info() and _populate_req_stats() on every decode
+          # step across all 64 DEP64 ranks).
+          print_iter_log: false
+          enable_iter_perf_stats: false
+          enable_iter_req_stats: false
+          stream_interval: 30
+          num_postprocess_workers: 4
+          kv_cache_config:
+            enable_block_reuse: false
+            free_gpu_memory_fraction: 0.9
+            dtype: fp8
+          moe_config:
+            backend: CUTEDSL
+            use_low_precision_moe_combine: true
+          nvfp4_gemm_config:
+            allowed_backends:
+            - cutlass
+            - cublaslt
+            - cutedsl
+            - cuda_core
+          cache_transceiver_config:
+            max_tokens_in_buffer: 16384
+            backend: UCX
+            # GKE EDIT (conversion spec §3.3): KV transfer timeouts. The Slurm drop
+            # leaves these at the TRT-LLM defaults, which assume a RoCE fabric that
+            # hands off in single-digit ms. On GKE the ctx->gen hop is UCX cuda_ipc
+            # over MNNVL and the first transfer of a run also pays ComputeDomain
+            # channel setup; the default window expires mid-handshake and the
+            # request fails with a KV transfer timeout while both servers stay
+            # 'healthy'. Present in the proven 45,760 tok/s point_256 recipe.
+            kv_transfer_timeout_ms: 120000
+            kv_transfer_sender_future_timeout_ms: 10000
+          cuda_graph_config:
+            enable_padding: true
+            batch_sizes:
+            - 1
+            - 2
+            - 4
+          scheduler_config:
+            capacity_scheduler_policy: MAX_UTILIZATION
+            context_chunking_policy: FIRST_COME_FIRST_SERVED
+          speculative_config:
+            decoding_type: MTP
+            num_nextn_predict_layers: 3
+            max_concurrency: 16384
+        - EOF_SNAP_GEN
+        - cp "${{ artifacts.CLIENT_CONFIG.path }}" "${SFLOW_TASK_OUTPUT_DIR}/client.yaml"
+        # The GKE recipe itself is the third config that defines this run.
+        # Record the resolved topology so the snapshot is self-describing.
+        - |
+          cat << 'EOF_SNAP_ENV' > "${SFLOW_TASK_OUTPUT_DIR}/gke-topology.txt"
+          point                = 256
+          NUM_CTX_SERVERS      = ${{ variables.NUM_CTX_SERVERS }}
+          GPUS_PER_CTX_RANK    = ${{ variables.GPUS_PER_CTX_RANK }}
+          NUM_GEN_SERVERS      = ${{ variables.NUM_GEN_SERVERS }}
+          GPUS_PER_GEN_RANK    = ${{ variables.GPUS_PER_GEN_RANK }}
+          NUM_FRONTEND_SERVERS = ${{ variables.NUM_FRONTEND_SERVERS }}
+          TOTAL_NODES          = ${{ variables.TOTAL_NODES }}
+          MODE                 = ${{ variables.MODE }}
+          WITH_LCB             = ${{ variables.WITH_LCB }}
+          TRTLLM_IMAGE         = ${{ variables.TRTLLM_IMAGE }}
+          CLIENT_IMAGE         = ${{ variables.CLIENT_IMAGE }}
+          MODEL_PATH           = ${{ variables.MODEL_PATH }}
+          DATA_PATH            = ${{ variables.DATA_PATH }}
+          EOF_SNAP_ENV
+        - ls -la "${SFLOW_TASK_OUTPUT_DIR}"
+
+    # =====================================================================
+    # PREFILL (context) servers -- 2 x DEP4.
+    # =====================================================================
+    - name: prefill_server
+      replicas:
+        count: ${{ variables.NUM_CTX_SERVERS }}
+        policy: parallel
+      resources:
+        gpus:
+          count: ${{ variables.GPUS_PER_CTX_RANK }}
+      operator: mpi_trtllm_ctx
+      script:
+        - |
+          cat << 'EOF_CTX' > server-ctx.yaml.$$
+          # ----------------------------------------------------------------------------
+          # server-ctx.yaml -- VERBATIM from the NVIDIA Slurm drop
+          #   .../deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_256/server-ctx.yaml
+          # apart from the two mandatory GKE edits marked "GKE EDIT" below. Do not
+          # re-tune anything here: these are NVIDIA's certified numbers for this point.
+          #
+          # ctx runs DEP4 (tensor_parallel_size = moe_expert_parallel_size = 4).
+          # cuda_graph_config stays null and that is CORRECT for prefill: it batches
+          # ~16k tokens per step, so kernel-launch overhead is noise and eager is right.
+          # Graphs are only mandatory on the decode path (see server-gen.yaml).
+          # ----------------------------------------------------------------------------
+          backend: pytorch
+          tensor_parallel_size: 4
+          moe_expert_parallel_size: 4
+          enable_attention_dp: true
+          pipeline_parallel_size: 1
+          max_batch_size: 128
+          max_num_tokens: 16384
+          max_seq_len: 23140
+          # GKE EDIT: disable per-iteration CUDA event sync and stdout log formatting
+          # in PyExecutor.profile_step() (matching gpt-oss-120b). enable_iter_perf_stats
+          # and enable_iter_req_stats stay false as in the Slurm drop (when true, they
+          # invoke torch.cuda.mem_get_info() and _populate_req_stats() on every decode
+          # step across all 64 DEP64 ranks).
+          print_iter_log: false
+          enable_iter_perf_stats: false
+          enable_iter_req_stats: false
+          cuda_graph_config: null
+          disable_overlap_scheduler: true
+          kv_cache_config:
+            enable_block_reuse: false
+            free_gpu_memory_fraction: 0.85
+            dtype: fp8
+          moe_config:
+            backend: TRTLLM
+          nvfp4_gemm_config:
+            allowed_backends:
+            - cutlass
+            - cublaslt
+            - cutedsl
+            - cuda_core
+          cache_transceiver_config:
+            max_tokens_in_buffer: 16384
+            backend: UCX
+            # GKE EDIT (conversion spec §3.3): KV transfer timeouts. The Slurm drop
+            # leaves these at the TRT-LLM defaults, which assume a RoCE fabric that
+            # hands off in single-digit ms. On GKE the ctx->gen hop is UCX cuda_ipc
+            # over MNNVL and the first transfer of a run also pays ComputeDomain
+            # channel setup; the default window expires mid-handshake and the
+            # request fails with a KV transfer timeout while both servers stay
+            # 'healthy'. Present in the proven 45,760 tok/s point_256 recipe.
+            kv_transfer_timeout_ms: 120000
+            kv_transfer_sender_future_timeout_ms: 10000
+          scheduler_config:
+            capacity_scheduler_policy: MAX_UTILIZATION
+            context_chunking_policy: FIRST_COME_FIRST_SERVED
+          speculative_config:
+            decoding_type: MTP
+            num_nextn_predict_layers: 3
+            max_concurrency: 16384
+        - EOF_CTX
+        # Atomic rename: co-located servers share one merged-pod filesystem
+        # (GPT-OSS C140 died on the same race with `cp`, 2026-10-01).
+        - mv -f server-ctx.yaml.$$ server-ctx.yaml
+        # ---------------------------------------------------------------------
+        # GKE compatibility layer -- conversion spec §4. Copied verbatim from the
+        # proven point_256 recipe (45,760 tok/s vs a 44,858 Slurm reference).
+        # Identical on prefill and decode. None of it comes from the Slurm
+        # recipe's server-env.yaml; see the UCX comment below for why.
+        # ---------------------------------------------------------------------
+        # TRT-LLM's hang detector aborts a rank after 300 s without progress. At
+        # these concurrencies a legitimate MoE/MTP step plus a cold KV transfer
+        # can exceed that during warmup, and the abort looks like a crash rather
+        # than a timeout. Raise it to an hour. `|| true` in spirit -- the python
+        # is wrapped in try/except and prints a GKE_PATCH missing line naming
+        # the file if the image layout moved, which it will on a TRTLLM_IMAGE
+        # change.
+        #
+        # IDEMPOTENT + ATOMIC. sflow merges co-located GPU tasks into ONE pod
+        # (e.g. several DEP2 prefill servers per node), so up to four servers
+        # run this at once against the same container filesystem. An in-place
+        # open(path, "w") truncates the file; a sibling importing tensorrt_llm
+        # at that instant reads a half-written module and dies with
+        # `ImportError: cannot import name HangDetector` (hit on the GPT-OSS
+        # 17-node validation run, 2026-09-26). Skip if already patched,
+        # otherwise write a temp file in the same directory and os.replace()
+        # it, so readers only ever see the old or the new file.
+        - |
+          python3 -c '
+          import os, tempfile
+          path = "/usr/local/lib/python3.12/dist-packages/tensorrt_llm/_torch/pyexecutor/hang_detector.py"
+          old = "self.timeout = timeout if timeout is not None else 300"
+          new = "self.timeout = int(os.environ.get(\"TRTLLM_HANG_DETECTOR_TIMEOUT\", \"3600\")) if timeout is None else timeout"
+          try:
+              with open(path, "r") as f:
+                  s = f.read()
+              if new in s:
+                  print("hang_detector: already patched")
+              elif old not in s:
+                  print(f"GKE_PATCH missing: hang_detector pattern not found in {path}; NOT patched")
+              else:
+                  s = s.replace(old, new)
+                  if "import os" not in s:
+                      s = "import os\n" + s
+                  fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".sflow-tmp")
+                  with os.fdopen(fd, "w") as f:
+                      f.write(s)
+                  os.chmod(tmp, os.stat(path).st_mode)
+                  os.replace(tmp, path)
+                  print("hang_detector: patched (atomic)")
+          except Exception as e:
+              print(f"GKE_PATCH missing: could not patch hang_detector at {path}: {e}")
+
+          # Backport NVIDIA TensorRT-LLM 1.3.0rc25 fix for get_numa_aware_cpu_affinity:
+          # in 1.3.0rc14, nvmlDeviceGetHandleByIndex(device_id) was called with the
+          # local CUDA ordinal (0..1 for DEP2 prefill) without mapping through
+          # CUDA_VISIBLE_DEVICES. When sflow packs two DEP2 prefill servers onto one
+          # 4-GPU GB300 node via CUDA_VISIBLE_DEVICES=0,1,2,3 and 2,3,0,1, the second
+          # server on physical GPUs 2 and 3 (Grace Socket 1, CPUs 72..143) queried
+          # physical GPUs 0 and 1 and bound itself to Grace Socket 0 (CPUs 0..71).
+          u_path = "/usr/local/lib/python3.12/dist-packages/tensorrt_llm/llmapi/utils.py"
+          u_old = "        handle = pynvml.nvmlDeviceGetHandleByIndex(device_id)"
+          u_new = "        _cvd = [x.strip() for x in (os.environ.get(\"CUDA_VISIBLE_DEVICES\") or \"\").split(\",\") if x.strip()]\n        handle = pynvml.nvmlDeviceGetHandleByIndex(int(_cvd[device_id]) if (0 <= device_id < len(_cvd) and _cvd[device_id].isdigit()) else device_id)"
+          try:
+              with open(u_path, "r") as f:
+                  us = f.read()
+              if u_new in us:
+                  print("numa_affinity: already patched")
+              elif u_old not in us:
+                  print(f"GKE_PATCH missing: numa_affinity pattern not found in {u_path}; NOT patched")
+              else:
+                  us = us.replace(u_old, u_new, 1)
+                  fd, tmp = tempfile.mkstemp(dir=os.path.dirname(u_path), suffix=".sflow-tmp")
+                  with os.fdopen(fd, "w") as f:
+                      f.write(us)
+                  os.chmod(tmp, os.stat(u_path).st_mode)
+                  os.replace(tmp, u_path)
+                  print("numa_affinity: patched CUDA_VISIBLE_DEVICES resolution (atomic)")
+          except Exception as e:
+              print(f"GKE_PATCH missing: could not patch numa_affinity at {u_path}: {e}")
+
+          # Disable uvicorn per-request HTTP access logging (access_log=False) in
+          # trtllm-serve so the main asyncio event loop does not format and
+          # synchronously write HTTP 200 OK lines during high-concurrency runs.
+          o_path = "/usr/local/lib/python3.12/dist-packages/tensorrt_llm/serve/openai_server.py"
+          o_old = "config = uvicorn.Config(self.app,"
+          o_new = "config = uvicorn.Config(self.app, access_log=False,"
+          try:
+              with open(o_path, "r") as f:
+                  os_txt = f.read()
+              if o_new in os_txt:
+                  print("openai_server access_log: already patched")
+              elif o_old not in os_txt:
+                  print(f"GKE_PATCH missing: openai_server uvicorn.Config pattern not found in {o_path}; NOT patched")
+              else:
+                  os_txt = os_txt.replace(o_old, o_new, 1)
+                  fd, tmp = tempfile.mkstemp(dir=os.path.dirname(o_path), suffix=".sflow-tmp")
+                  with os.fdopen(fd, "w") as f:
+                      f.write(os_txt)
+                  os.chmod(tmp, os.stat(o_path).st_mode)
+                  os.replace(tmp, o_path)
+                  print("openai_server access_log: disabled (atomic)")
+          except Exception as e:
+              print(f"GKE_PATCH missing: could not patch openai_server access_log at {o_path}: {e}")
+          '
+        # Bigger socket buffers for the UCX/NCCL control channels. Best-effort:
+        # a non-privileged pod cannot set these and it is not fatal.
+        - sysctl -w net.core.rmem_max=134217728 2>/dev/null || true
+        - sysctl -w net.core.wmem_max=134217728 2>/dev/null || true
+        - sysctl -w net.ipv4.tcp_rmem="4096 87380 134217728" 2>/dev/null || true
+        - sysctl -w net.ipv4.tcp_wmem="4096 65536 134217728" 2>/dev/null || true
+        - export LD_LIBRARY_PATH="/usr/local/ucx/lib:/usr/local/ucx/lib/ucx:/usr/local/nvidia/lib64:${LD_LIBRARY_PATH:-}"
+        # Slurm mounts a shared /hf_cache; node-local /tmp is the GKE equivalent.
+        # (v1.0.2's server-env.yaml no longer sets HF_HOME at all; these
+        # node-local caches are GKE-layer values and stay as proven.)
+        - export HF_HOME=/tmp/hf
+        - export TIKTOKEN_RS_CACHE_DIR=/tmp/tiktoken
+        # Rank-local HF_MODULES_CACHE, as the Slurm template does, to avoid a
+        # shared-lock stall when every rank imports trust_remote_code modules.
+        - export HF_MODULES_CACHE=/tmp/trtllm-hf-modules-${SFLOW_REPLICA_INDEX:-0}
+        - mkdir -p "${HF_MODULES_CACHE}"
+        # Per-rank wrapper (same as Kimi-K3 G_RANK_ENV): sets a disjoint per-pod
+        # /proc/sys/kernel/ns_last_pid base so UCX's (pid, pid_ns, cu_dev)
+        # remote MNNVL VMM handle cache (libuct_cuda.so uct_cuda_ipc_map_memhandle)
+        # never collides across containers on identically booted GKE nodes,
+        # restores full-node CPU affinity so TLLM_NUMA_AWARE_WORKER_AFFINITY=1
+        # can bind each GPU worker to its NUMA node, and isolates per-rank
+        # HF_MODULES_CACHE.
+        - |
+          cat > "/tmp/dsr1-rank-env.sh.$$" <<'EOF_RANK_ENV'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          unset BASH_ENV ENV NCCL_ENV_PLUGIN NCCL_TUNER_PLUGIN NCCL_PROFILER_PLUGIN NCCL_TUNER_CONFIG_PATH
+          export NCCL_NET_PLUGIN=none
+          taskset -pc "0-$(($(nproc --all 2>/dev/null || echo 144) - 1))" "$$" >/dev/null 2>&1 || true
+          role="$1"; shift
+          export DSR1_RANK="${OMPI_COMM_WORLD_RANK:?dsr1-rank-env.sh must be started by mpirun}"
+          if [ "$role" = "prefill" ]; then
+            pod_slot=$(( ${SFLOW_REPLICA_INDEX:-0} * 2 + DSR1_RANK / 4 ))
+          else
+            pod_slot=$(( 16 + ${SFLOW_REPLICA_INDEX:-0} * 16 + DSR1_RANK / 4 ))
+          fi
+          pod_pid_base=$(( 100000 + pod_slot * 30000 ))
+          (
+            flock -x 9
+            cur_pid=$(cat /proc/sys/kernel/ns_last_pid)
+            if [ "$cur_pid" -lt "$pod_pid_base" ]; then
+              echo "$pod_pid_base" > /proc/sys/kernel/ns_last_pid
+            fi
+          ) 9>/tmp/dsr1-pid-ns.lock
+          export HF_MODULES_CACHE="/tmp/trtllm-hf-modules-${role}-${SFLOW_REPLICA_INDEX:-0}-${DSR1_RANK}"
+          mkdir -p "$HF_MODULES_CACHE"
+          bash -c 'exec "$@"' _ "$@"
+          EOF_RANK_ENV
+          chmod 0755 "/tmp/dsr1-rank-env.sh.$$"
+          mv -f "/tmp/dsr1-rank-env.sh.$$" /tmp/dsr1-rank-env.sh
+        # Open MPI over the pod network. ob1/tcp on eth0 only: there is no
+        # verbs BTL in the pod, and letting OMPI autodetect picks cilium_host.
+        - export OMPI_MCA_pml=ob1
+        - export OMPI_MCA_btl=tcp,self
+        - export OMPI_MCA_btl_tcp_if_include=eth0
+        - export OMPI_MCA_oob_tcp_if_include=eth0
+        - export OMPI_MCA_hwloc_base_binding_policy=none
+        - export OMPI_MCA_rmaps_base_mapping_policy=node
+        - export OMPI_MCA_coll='^ucc'
+        - export TLLM_LOG_LEVEL=INFO
+        - export TRITON_PTXAS_PATH=/usr/local/cuda-13.1/bin/ptxas
+        # --- kept from the Slurm server-env.yaml (model/runtime flags only) ---
+        - export TRTLLM_MOE_ENABLE_ALLTOALL_WITHOUT_ALLGATHER=1
+        - export TRTLLM_SERVER_DISABLE_GC=1
+        - export TRTLLM_WORKER_DISABLE_GC=1
+        - export TRTLLM_ENABLE_PDL=1
+        - export TRTLLM_GEMM_ALLREDUCE_FUSION_ENABLED=1
+        - export NCCL_GRAPH_MIXING_SUPPORT=0
+        - export TLLM_NUMA_AWARE_WORKER_AFFINITY=1
+        # --- NCCL on MNNVL ----------------------------------------------------
+        # With rdma: disable there is no NET transport left, so cross-node NVLink
+        # is the only correct path: NCCL_MNNVL_ENABLE=1 turns it on and
+        # NCCL_CUMEM_ENABLE=1 gives the cuMem/VMM allocator the fabric handles it
+        # needs. NCCL_DEBUG=INFO stays on because README check 4 greps it for
+        # "via P2P/MNNVL".
+        - export NCCL_MNNVL_ENABLE=1
+        - export NCCL_CUMEM_ENABLE=1
+        - export MC_FORCE_MNNVL=1
+        - export NCCL_DEBUG=INFO
+        # Pin every socket bootstrap to the routable interface, same reason as
+        # UCX_NET_DEVICES below.
+        - export GLOO_SOCKET_IFNAME=eth0
+        - export TP_SOCKET_IFNAME=eth0
+        - export NCCL_SOCKET_IFNAME=eth0
+        # --- GKE canonical transport block -----------------------------------
+        # COPY VERBATIM. Do NOT port the Slurm equivalents from server-env.yaml
+        # (which sets UCX_CUDA_IPC_ENABLE_MNNVL=n, UCX_TLS=^posix); those are
+        # correct on a RoCE cluster and catastrophic here, and they fail without
+        # an error message.
+        #
+        # KV cache moves ctx->gen over cross-node NVLink via UCX cuda_ipc+MNNVL.
+        #
+        # UCX_CUDA_IPC_ENABLE_MNNVL MUST be 'y'. Slurm says 'n' because RoCE RDMA
+        # carries the transfer there. With 'n' on GKE every inter-node lane falls
+        # back to tcp/eth0 (confirmed in the UCX_PROTO_INFO tables) and TRT-LLM
+        # even logs its own "consider setting UCX_CUDA_IPC_ENABLE_MNNVL=y" hint:
+        # TTFT went to ~20 s and throughput was capped at roughly a tenth.
+        #
+        # `tcp` stays in UCX_TLS as the active-message/control channel -- a
+        # cuda-only list fails with "no active messages transport". Bulk KV still
+        # goes over cuda_ipc; seeing tcp/eth0 on the TAGGED MESSAGE rows in the
+        # log is normal and expected.
+        #
+        # UCX_NET_DEVICES=eth0 is REQUIRED and must be set explicitly. sflow used
+        # to inject it as a side effect of `rdma: auto`; with `rdma: disable` it
+        # no longer does, and UCX then enumerates every host interface and picks
+        # GKE's Cilium interface, publishing a link-local 169.254.x.x address no
+        # peer can route to. Run 20260829-001919 died on exactly that:
+        #   sock.c:348 UCX ERROR connect(dest_addr=<ip>:33475): Connection refused
+        #   what(): Error in addConnection(connRequest) for rank 0: Destination is unreachable
+        # This pins only NET-type devices; cuda_ipc/cuda_copy are ACC-type
+        # (UCX_ACC_DEVICES) and are unaffected.
+        #
+        # Do NOT add rc_x / UCX_IB_GID_INDEX / UCX_IB_ROCE_* and do NOT point
+        # UCX_NET_DEVICES at mlx5_*: those NICs are not inside the pod, so UCX
+        # silently drops them from the TLS list -- they look like tuned RDMA
+        # while doing nothing.
+        - export UCX_TLS=cuda_copy,cuda_ipc,sm,self,tcp
+        - export UCX_NET_DEVICES=eth0
+        - export UCX_CUDA_IPC_ENABLE_MNNVL=y
+        - export UCX_RNDV_SCHEME=put_zcopy
+        - export UCX_MEMTYPE_CACHE=n
+        - export UCX_MEMTYPE_REG_WHOLE=n
+        - export UCX_PROTO_INFO=y
+        - export TRTLLM_HANG_DETECTOR_TIMEOUT=3600
+        - export PORT=$(( ${{ variables.BASE_PORT }} + ${SFLOW_REPLICA_INDEX} ))
+        # `exec` is CORRECT here (and wrong in the benchmark task): the servers
+        # are signal-terminated and produce no artifacts sflow has to collect.
+        - >
+          exec mpirun -np ${{ variables.GPUS_PER_CTX_RANK }} --allow-run-as-root
+          -x HF_HOME=/tmp/hf
+          -x TIKTOKEN_RS_CACHE_DIR=/tmp/tiktoken
+          -x HF_MODULES_CACHE
+          -x LD_LIBRARY_PATH
+          -x NCCL_MNNVL_ENABLE=1
+          -x NCCL_CUMEM_ENABLE=1
+          -x MC_FORCE_MNNVL=1
+          -x NCCL_DEBUG=INFO
+          -x GLOO_SOCKET_IFNAME=eth0
+          -x TP_SOCKET_IFNAME=eth0
+          -x NCCL_SOCKET_IFNAME=eth0
+          -x TRTLLM_GEMM_ALLREDUCE_FUSION_ENABLED=1
+          -x TRITON_PTXAS_PATH
+          -x TRTLLM_MOE_ENABLE_ALLTOALL_WITHOUT_ALLGATHER=1
+          -x TRTLLM_SERVER_DISABLE_GC=1
+          -x TRTLLM_WORKER_DISABLE_GC=1
+          -x TRTLLM_ENABLE_PDL=1
+          -x NCCL_GRAPH_MIXING_SUPPORT=0
+          -x UCX_TLS=cuda_copy,cuda_ipc,sm,self,tcp
+          -x UCX_NET_DEVICES=eth0
+          -x UCX_CUDA_IPC_ENABLE_MNNVL=y
+          -x UCX_RNDV_SCHEME=put_zcopy
+          -x UCX_MEMTYPE_CACHE=n
+          -x UCX_MEMTYPE_REG_WHOLE=n
+          -x UCX_PROTO_INFO=y
+          -x TLLM_NUMA_AWARE_WORKER_AFFINITY=1
+          -x TRTLLM_HANG_DETECTOR_TIMEOUT
+          /tmp/dsr1-rank-env.sh prefill
+          trtllm-llmapi-launch
+          trtllm-serve ${{ variables.MODEL_PATH }}
+          --host 0.0.0.0 --port ${PORT}
+          --extra_llm_api_options server-ctx.yaml
+      probes:
+        readiness:
+          log_watch:
+            match_pattern: "Application startup complete."
+            match_count: 1
+          # Slurm allows 1800 s. Doubled: on GKE the weights come off the node's
+          # local SSD on first touch with nothing warmed, and the ComputeDomain
+          # channel has to come up before NCCL init completes.
+          timeout: 3600
+          interval: 20
+        failure:
+          log_watch:
+            match_pattern: "Traceback (most recent call last)"
+            match_count: 5
+          interval: 30
+
+    # =====================================================================
+    # DECODE (generation) servers -- 2 x DEP32.
+    # =====================================================================
+    - name: decode_server
+      replicas:
+        count: ${{ variables.NUM_GEN_SERVERS }}
+        policy: parallel
+      resources:
+        gpus:
+          count: ${{ variables.GPUS_PER_GEN_RANK }}
+      operator: mpi_trtllm_gen
+      script:
+        - |
+          cat << 'EOF_GEN' > server-gen.yaml.$$
+          # ----------------------------------------------------------------------------
+          # server-gen.yaml -- VERBATIM from the NVIDIA Slurm drop
+          #   .../deepseek-r1/configs/GB300-NVL72_GB300-288GB_aarch64x72_TRTLLM/point_256/server-gen.yaml
+          # apart from the two mandatory GKE edits marked "GKE EDIT" below.
+          #
+          # gen runs DEP32 at C=128 per replica.
+          #
+          # CUDA GRAPHS: checked, and NOT touched. Conversion spec §3.1 says to replace
+          # `cuda_graph_config: null` with an explicit batch_sizes ladder -- that edit is
+          # NOT needed in the endpoints v1.0.2 drop. Every one of the twelve
+          # server-gen.yaml files already ships an explicit
+          #   cuda_graph_config: {enable_padding: true, batch_sizes: [...]}
+          # ladder covering 1..max_batch_size, so the batch_sizes list below is NVIDIA's,
+          # byte-for-byte, not ours. (This is the single biggest trap in the port: the
+          # older DSR1 drop had null here on point_256 and running eager measured 177 ms
+          # per decode step vs 13.6 ms with graphs -- ~3.3k tok/s instead of ~45.8k, with
+          # no error and a perfectly healthy-looking server.) If a future drop
+          # reintroduces null, `--check` will still pass but the run will be 13x slow:
+          # grep the log for "Creating CUDA graph instances" (README check 2).
+          # ----------------------------------------------------------------------------
+          backend: pytorch
+          tensor_parallel_size: 32
+          moe_expert_parallel_size: 32
+          enable_attention_dp: true
+          enable_lm_head_tp_in_adp: true
+          pipeline_parallel_size: 1
+          max_batch_size: 4
+          max_num_tokens: 16
+          max_seq_len: 23140
+          # GKE EDIT: disable per-iteration CUDA event sync and stdout log formatting
+          # in PyExecutor.profile_step() (matching gpt-oss-120b). enable_iter_perf_stats
+          # and enable_iter_req_stats stay false as in the Slurm drop (when true, they
+          # invoke torch.cuda.mem_get_info() and _populate_req_stats() on every decode
+          # step across all 64 DEP64 ranks).
+          print_iter_log: false
+          enable_iter_perf_stats: false
+          enable_iter_req_stats: false
+          stream_interval: 30
+          num_postprocess_workers: 4
+          kv_cache_config:
+            enable_block_reuse: false
+            free_gpu_memory_fraction: 0.9
+            dtype: fp8
+          moe_config:
+            backend: CUTEDSL
+            use_low_precision_moe_combine: true
+          nvfp4_gemm_config:
+            allowed_backends:
+            - cutlass
+            - cublaslt
+            - cutedsl
+            - cuda_core
+          cache_transceiver_config:
+            max_tokens_in_buffer: 16384
+            backend: UCX
+            # GKE EDIT (conversion spec §3.3): KV transfer timeouts. The Slurm drop
+            # leaves these at the TRT-LLM defaults, which assume a RoCE fabric that
+            # hands off in single-digit ms. On GKE the ctx->gen hop is UCX cuda_ipc
+            # over MNNVL and the first transfer of a run also pays ComputeDomain
+            # channel setup; the default window expires mid-handshake and the
+            # request fails with a KV transfer timeout while both servers stay
+            # 'healthy'. Present in the proven 45,760 tok/s point_256 recipe.
+            kv_transfer_timeout_ms: 120000
+            kv_transfer_sender_future_timeout_ms: 10000
+          cuda_graph_config:
+            enable_padding: true
+            batch_sizes:
+            - 1
+            - 2
+            - 4
+          scheduler_config:
+            capacity_scheduler_policy: MAX_UTILIZATION
+            context_chunking_policy: FIRST_COME_FIRST_SERVED
+          speculative_config:
+            decoding_type: MTP
+            num_nextn_predict_layers: 3
+            max_concurrency: 16384
+        - EOF_GEN
+        - mv -f server-gen.yaml.$$ server-gen.yaml
+        # ---------------------------------------------------------------------
+        # GKE compatibility layer -- conversion spec §4. Copied verbatim from the
+        # proven point_256 recipe (45,760 tok/s vs a 44,858 Slurm reference).
+        # Identical on prefill and decode. None of it comes from the Slurm
+        # recipe's server-env.yaml; see the UCX comment below for why.
+        # ---------------------------------------------------------------------
+        # TRT-LLM's hang detector aborts a rank after 300 s without progress. At
+        # these concurrencies a legitimate MoE/MTP step plus a cold KV transfer
+        # can exceed that during warmup, and the abort looks like a crash rather
+        # than a timeout. Raise it to an hour. `|| true` in spirit -- the python
+        # is wrapped in try/except and prints a GKE_PATCH missing line naming
+        # the file if the image layout moved, which it will on a TRTLLM_IMAGE
+        # change.
+        #
+        # IDEMPOTENT + ATOMIC. sflow merges co-located GPU tasks into ONE pod
+        # (e.g. several DEP2 prefill servers per node), so up to four servers
+        # run this at once against the same container filesystem. An in-place
+        # open(path, "w") truncates the file; a sibling importing tensorrt_llm
+        # at that instant reads a half-written module and dies with
+        # `ImportError: cannot import name HangDetector` (hit on the GPT-OSS
+        # 17-node validation run, 2026-09-26). Skip if already patched,
+        # otherwise write a temp file in the same directory and os.replace()
+        # it, so readers only ever see the old or the new file.
+        - |
+          python3 -c '
+          import os, tempfile
+          path = "/usr/local/lib/python3.12/dist-packages/tensorrt_llm/_torch/pyexecutor/hang_detector.py"
+          old = "self.timeout = timeout if timeout is not None else 300"
+          new = "self.timeout = int(os.environ.get(\"TRTLLM_HANG_DETECTOR_TIMEOUT\", \"3600\")) if timeout is None else timeout"
+          try:
+              with open(path, "r") as f:
+                  s = f.read()
+              if new in s:
+                  print("hang_detector: already patched")
+              elif old not in s:
+                  print(f"GKE_PATCH missing: hang_detector pattern not found in {path}; NOT patched")
+              else:
+                  s = s.replace(old, new)
+                  if "import os" not in s:
+                      s = "import os\n" + s
+                  fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".sflow-tmp")
+                  with os.fdopen(fd, "w") as f:
+                      f.write(s)
+                  os.chmod(tmp, os.stat(path).st_mode)
+                  os.replace(tmp, path)
+                  print("hang_detector: patched (atomic)")
+          except Exception as e:
+              print(f"GKE_PATCH missing: could not patch hang_detector at {path}: {e}")
+
+          # Backport NVIDIA TensorRT-LLM 1.3.0rc25 fix for get_numa_aware_cpu_affinity:
+          # in 1.3.0rc14, nvmlDeviceGetHandleByIndex(device_id) was called with the
+          # local CUDA ordinal (0..1 for DEP2 prefill) without mapping through
+          # CUDA_VISIBLE_DEVICES. When sflow packs two DEP2 prefill servers onto one
+          # 4-GPU GB300 node via CUDA_VISIBLE_DEVICES=0,1,2,3 and 2,3,0,1, the second
+          # server on physical GPUs 2 and 3 (Grace Socket 1, CPUs 72..143) queried
+          # physical GPUs 0 and 1 and bound itself to Grace Socket 0 (CPUs 0..71).
+          u_path = "/usr/local/lib/python3.12/dist-packages/tensorrt_llm/llmapi/utils.py"
+          u_old = "        handle = pynvml.nvmlDeviceGetHandleByIndex(device_id)"
+          u_new = "        _cvd = [x.strip() for x in (os.environ.get(\"CUDA_VISIBLE_DEVICES\") or \"\").split(\",\") if x.strip()]\n        handle = pynvml.nvmlDeviceGetHandleByIndex(int(_cvd[device_id]) if (0 <= device_id < len(_cvd) and _cvd[device_id].isdigit()) else device_id)"
+          try:
+              with open(u_path, "r") as f:
+                  us = f.read()
+              if u_new in us:
+                  print("numa_affinity: already patched")
+              elif u_old not in us:
+                  print(f"GKE_PATCH missing: numa_affinity pattern not found in {u_path}; NOT patched")
+              else:
+                  us = us.replace(u_old, u_new, 1)
+                  fd, tmp = tempfile.mkstemp(dir=os.path.dirname(u_path), suffix=".sflow-tmp")
+                  with os.fdopen(fd, "w") as f:
+                      f.write(us)
+                  os.chmod(tmp, os.stat(u_path).st_mode)
+                  os.replace(tmp, u_path)
+                  print("numa_affinity: patched CUDA_VISIBLE_DEVICES resolution (atomic)")
+          except Exception as e:
+              print(f"GKE_PATCH missing: could not patch numa_affinity at {u_path}: {e}")
+
+          # Disable uvicorn per-request HTTP access logging (access_log=False) in
+          # trtllm-serve so the main asyncio event loop does not format and
+          # synchronously write HTTP 200 OK lines during high-concurrency runs.
+          o_path = "/usr/local/lib/python3.12/dist-packages/tensorrt_llm/serve/openai_server.py"
+          o_old = "config = uvicorn.Config(self.app,"
+          o_new = "config = uvicorn.Config(self.app, access_log=False,"
+          try:
+              with open(o_path, "r") as f:
+                  os_txt = f.read()
+              if o_new in os_txt:
+                  print("openai_server access_log: already patched")
+              elif o_old not in os_txt:
+                  print(f"GKE_PATCH missing: openai_server uvicorn.Config pattern not found in {o_path}; NOT patched")
+              else:
+                  os_txt = os_txt.replace(o_old, o_new, 1)
+                  fd, tmp = tempfile.mkstemp(dir=os.path.dirname(o_path), suffix=".sflow-tmp")
+                  with os.fdopen(fd, "w") as f:
+                      f.write(os_txt)
+                  os.chmod(tmp, os.stat(o_path).st_mode)
+                  os.replace(tmp, o_path)
+                  print("openai_server access_log: disabled (atomic)")
+          except Exception as e:
+              print(f"GKE_PATCH missing: could not patch openai_server access_log at {o_path}: {e}")
+          '
+        # Bigger socket buffers for the UCX/NCCL control channels. Best-effort:
+        # a non-privileged pod cannot set these and it is not fatal.
+        - sysctl -w net.core.rmem_max=134217728 2>/dev/null || true
+        - sysctl -w net.core.wmem_max=134217728 2>/dev/null || true
+        - sysctl -w net.ipv4.tcp_rmem="4096 87380 134217728" 2>/dev/null || true
+        - sysctl -w net.ipv4.tcp_wmem="4096 65536 134217728" 2>/dev/null || true
+        - export LD_LIBRARY_PATH="/usr/local/ucx/lib:/usr/local/ucx/lib/ucx:/usr/local/nvidia/lib64:${LD_LIBRARY_PATH:-}"
+        # Slurm mounts a shared /hf_cache; node-local /tmp is the GKE equivalent.
+        # (v1.0.2's server-env.yaml no longer sets HF_HOME at all; these
+        # node-local caches are GKE-layer values and stay as proven.)
+        - export HF_HOME=/tmp/hf
+        - export TIKTOKEN_RS_CACHE_DIR=/tmp/tiktoken
+        # Rank-local HF_MODULES_CACHE, as the Slurm template does, to avoid a
+        # shared-lock stall when every rank imports trust_remote_code modules.
+        - export HF_MODULES_CACHE=/tmp/trtllm-hf-modules-${SFLOW_REPLICA_INDEX:-0}
+        - mkdir -p "${HF_MODULES_CACHE}"
+        # Per-rank wrapper (same as Kimi-K3 G_RANK_ENV): sets a disjoint per-pod
+        # /proc/sys/kernel/ns_last_pid base so UCX's (pid, pid_ns, cu_dev)
+        # remote MNNVL VMM handle cache (libuct_cuda.so uct_cuda_ipc_map_memhandle)
+        # never collides across containers on identically booted GKE nodes,
+        # restores full-node CPU affinity so TLLM_NUMA_AWARE_WORKER_AFFINITY=1
+        # can bind each GPU worker to its NUMA node, and isolates per-rank
+        # HF_MODULES_CACHE.
+        - |
+          cat > "/tmp/dsr1-rank-env.sh.$$" <<'EOF_RANK_ENV'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          unset BASH_ENV ENV NCCL_ENV_PLUGIN NCCL_TUNER_PLUGIN NCCL_PROFILER_PLUGIN NCCL_TUNER_CONFIG_PATH
+          export NCCL_NET_PLUGIN=none
+          taskset -pc "0-$(($(nproc --all 2>/dev/null || echo 144) - 1))" "$$" >/dev/null 2>&1 || true
+          role="$1"; shift
+          export DSR1_RANK="${OMPI_COMM_WORLD_RANK:?dsr1-rank-env.sh must be started by mpirun}"
+          if [ "$role" = "prefill" ]; then
+            pod_slot=$(( ${SFLOW_REPLICA_INDEX:-0} * 2 + DSR1_RANK / 4 ))
+          else
+            pod_slot=$(( 16 + ${SFLOW_REPLICA_INDEX:-0} * 16 + DSR1_RANK / 4 ))
+          fi
+          pod_pid_base=$(( 100000 + pod_slot * 30000 ))
+          (
+            flock -x 9
+            cur_pid=$(cat /proc/sys/kernel/ns_last_pid)
+            if [ "$cur_pid" -lt "$pod_pid_base" ]; then
+              echo "$pod_pid_base" > /proc/sys/kernel/ns_last_pid
+            fi
+          ) 9>/tmp/dsr1-pid-ns.lock
+          export HF_MODULES_CACHE="/tmp/trtllm-hf-modules-${role}-${SFLOW_REPLICA_INDEX:-0}-${DSR1_RANK}"
+          mkdir -p "$HF_MODULES_CACHE"
+          bash -c 'exec "$@"' _ "$@"
+          EOF_RANK_ENV
+          chmod 0755 "/tmp/dsr1-rank-env.sh.$$"
+          mv -f "/tmp/dsr1-rank-env.sh.$$" /tmp/dsr1-rank-env.sh
+        # Open MPI over the pod network. ob1/tcp on eth0 only: there is no
+        # verbs BTL in the pod, and letting OMPI autodetect picks cilium_host.
+        - export OMPI_MCA_pml=ob1
+        - export OMPI_MCA_btl=tcp,self
+        - export OMPI_MCA_btl_tcp_if_include=eth0
+        - export OMPI_MCA_oob_tcp_if_include=eth0
+        - export OMPI_MCA_hwloc_base_binding_policy=none
+        - export OMPI_MCA_rmaps_base_mapping_policy=node
+        - export OMPI_MCA_coll='^ucc'
+        - export TLLM_LOG_LEVEL=INFO
+        - export TRITON_PTXAS_PATH=/usr/local/cuda-13.1/bin/ptxas
+        # --- kept from the Slurm server-env.yaml (model/runtime flags only) ---
+        - export TRTLLM_MOE_ENABLE_ALLTOALL_WITHOUT_ALLGATHER=1
+        - export TRTLLM_SERVER_DISABLE_GC=1
+        - export TRTLLM_WORKER_DISABLE_GC=1
+        - export TRTLLM_ENABLE_PDL=1
+        - export TRTLLM_GEMM_ALLREDUCE_FUSION_ENABLED=1
+        - export NCCL_GRAPH_MIXING_SUPPORT=0
+        - export TLLM_NUMA_AWARE_WORKER_AFFINITY=1
+        # --- NCCL on MNNVL ----------------------------------------------------
+        # With rdma: disable there is no NET transport left, so cross-node NVLink
+        # is the only correct path: NCCL_MNNVL_ENABLE=1 turns it on and
+        # NCCL_CUMEM_ENABLE=1 gives the cuMem/VMM allocator the fabric handles it
+        # needs. NCCL_DEBUG=INFO stays on because README check 4 greps it for
+        # "via P2P/MNNVL".
+        - export NCCL_MNNVL_ENABLE=1
+        - export NCCL_CUMEM_ENABLE=1
+        - export MC_FORCE_MNNVL=1
+        - export NCCL_DEBUG=INFO
+        # Pin every socket bootstrap to the routable interface, same reason as
+        # UCX_NET_DEVICES below.
+        - export GLOO_SOCKET_IFNAME=eth0
+        - export TP_SOCKET_IFNAME=eth0
+        - export NCCL_SOCKET_IFNAME=eth0
+        # --- GKE canonical transport block (see prefill_server for the full rationale) ---
+        - export UCX_TLS=cuda_copy,cuda_ipc,sm,self,tcp
+        - export UCX_NET_DEVICES=eth0
+        - export UCX_CUDA_IPC_ENABLE_MNNVL=y
+        - export UCX_RNDV_SCHEME=put_zcopy
+        - export UCX_MEMTYPE_CACHE=n
+        - export UCX_MEMTYPE_REG_WHOLE=n
+        - export UCX_PROTO_INFO=y
+        - export TRTLLM_HANG_DETECTOR_TIMEOUT=3600
+        - export PORT=$(( ${{ variables.BASE_PORT }} + ${{ variables.NUM_CTX_SERVERS }} + ${SFLOW_REPLICA_INDEX} ))
+        - >
+          exec mpirun -np ${{ variables.GPUS_PER_GEN_RANK }} --allow-run-as-root
+          -x HF_HOME=/tmp/hf
+          -x TIKTOKEN_RS_CACHE_DIR=/tmp/tiktoken
+          -x HF_MODULES_CACHE
+          -x LD_LIBRARY_PATH
+          -x NCCL_MNNVL_ENABLE=1
+          -x NCCL_CUMEM_ENABLE=1
+          -x MC_FORCE_MNNVL=1
+          -x NCCL_DEBUG=INFO
+          -x GLOO_SOCKET_IFNAME=eth0
+          -x TP_SOCKET_IFNAME=eth0
+          -x NCCL_SOCKET_IFNAME=eth0
+          -x TRTLLM_GEMM_ALLREDUCE_FUSION_ENABLED=1
+          -x TRITON_PTXAS_PATH
+          -x TRTLLM_MOE_ENABLE_ALLTOALL_WITHOUT_ALLGATHER=1
+          -x TRTLLM_SERVER_DISABLE_GC=1
+          -x TRTLLM_WORKER_DISABLE_GC=1
+          -x TRTLLM_ENABLE_PDL=1
+          -x NCCL_GRAPH_MIXING_SUPPORT=0
+          -x UCX_TLS=cuda_copy,cuda_ipc,sm,self,tcp
+          -x UCX_NET_DEVICES=eth0
+          -x UCX_CUDA_IPC_ENABLE_MNNVL=y
+          -x UCX_RNDV_SCHEME=put_zcopy
+          -x UCX_MEMTYPE_CACHE=n
+          -x UCX_MEMTYPE_REG_WHOLE=n
+          -x UCX_PROTO_INFO=y
+          -x TLLM_NUMA_AWARE_WORKER_AFFINITY=1
+          -x TRTLLM_HANG_DETECTOR_TIMEOUT
+          /tmp/dsr1-rank-env.sh decode
+          trtllm-llmapi-launch
+          trtllm-serve ${{ variables.MODEL_PATH }}
+          --host 0.0.0.0 --port ${PORT}
+          --extra_llm_api_options server-gen.yaml
+      probes:
+        readiness:
+          log_watch:
+            match_pattern: "Application startup complete."
+            match_count: 1
+          timeout: 3600
+          interval: 20
+        failure:
+          log_watch:
+            match_pattern: "Traceback (most recent call last)"
+            match_count: 5
+          interval: 30
+
+    # =====================================================================
+    # Disaggregated frontends -- 4 replicas pinned across the
+    # prefill nodes (0..ctx_full_nodes-1), keeping all decode_server nodes
+    # (nodes 2..17) 100% free of frontend_server CPU/network load.
+    # CPU-only pods that fan requests out to the ctx/gen servers.
+    # =====================================================================
+    - name: frontend_server
+      replicas:
+        count: ${{ variables.NUM_FRONTEND_SERVERS }}
+        policy: parallel
+      resources:
+        nodes:
+          indices: >-
+            {% set ctx_full_nodes = (variables.NUM_CTX_SERVERS * variables.GPUS_PER_CTX_RANK) // variables.GPUS_PER_NODE %}[{% for i in range(variables.NUM_FRONTEND_SERVERS) %}${{ i % ctx_full_nodes }}{% if not loop.last %}, {% endif %}{% endfor %}]
+          count: 1
+      operator: trtllm_k8s
+      script:
+        - set -uo pipefail
+        - export LD_LIBRARY_PATH=<workdir>/bin/nvidia/lib64:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:${LD_LIBRARY_PATH:-}
+        # `trtllm-serve disaggregated` imports the full TRT-LLM stack, which
+        # probes the GPU at import time. These four seds stub those probes so it
+        # runs on a pod with no GPU allocated. All are `|| true` -- a failed
+        # patch must not kill the frontend -- but a SILENT failed patch is how
+        # you get an import crash 40 minutes into a run, so each path is checked
+        # and a missing one is reported loudly. They are pinned to the
+        # TRTLLM_IMAGE python layout; re-check them when that image changes.
+        - |
+          TLLM_PKG=/usr/local/lib/python3.12/dist-packages/tensorrt_llm
+          for f in profiler.py _torch/cuda_tile_utils.py \
+                   _torch/custom_ops/torch_custom_ops.py \
+                   _torch/attention_backend/flashinfer.py \
+                   serve/openai_disagg_server.py; do
+            [ -f "${TLLM_PKG}/${f}" ] || echo "GKE_PATCH missing: ${TLLM_PKG}/${f} -- frontend GPU stubs may not apply (image layout changed?)"
+          done
+        - sed -i 's/with PyNVMLContext():/if False:/' /usr/local/lib/python3.12/dist-packages/tensorrt_llm/profiler.py 2>/dev/null || true
+        - sed -i 's/if (cc := torch.cuda.get_device_properties()) and (cc.major, cc.minor) < (10, 0):/if torch.cuda.is_available() and (cc := torch.cuda.get_device_properties()) and (cc.major, cc.minor) < (10, 0):/' /usr/local/lib/python3.12/dist-packages/tensorrt_llm/_torch/cuda_tile_utils.py 2>/dev/null || true
+        - sed -i 's/deep_gemm.set_pdl(get_env_enable_pdl())/pass/' /usr/local/lib/python3.12/dist-packages/tensorrt_llm/_torch/custom_ops/torch_custom_ops.py 2>/dev/null || true
+        - sed -i 's/capability = torch.cuda.get_device_capability()/capability = (10, 0) if torch.cuda.is_available() else (10, 0)/' /usr/local/lib/python3.12/dist-packages/tensorrt_llm/_torch/attention_backend/flashinfer.py 2>/dev/null || true
+        - sed -i 's/config = uvicorn.Config(self.app,/config = uvicorn.Config(self.app, access_log=False,/' /usr/local/lib/python3.12/dist-packages/tensorrt_llm/serve/openai_disagg_server.py 2>/dev/null || true
+        - export PORT=$(( ${{ variables.FRONTEND_PORT }} + ${SFLOW_REPLICA_INDEX} ))
+        - MY_IP=$(echo ${SFLOW_TASK_ASSIGNED_NODE_IPS} | cut -d',' -f1)
+        - MY_CONFIG=server_config_${SFLOW_REPLICA_INDEX}.yaml
+        # GKE replacement for the Slurm template's generate_master_yaml.py.
+        - |
+          python3 -c "
+          import sys, yaml
+          ctx_urls = [u.strip().replace('http://', '').replace('https://', '') for u in open('${{ artifacts.CTX_URLS.path }}').read().splitlines() if u.strip()]
+          gen_urls = [u.strip().replace('http://', '').replace('https://', '') for u in open('${{ artifacts.GEN_URLS.path }}').read().splitlines() if u.strip()]
+          assert len(ctx_urls) == ${{ variables.NUM_CTX_SERVERS }}, f'expected ${{ variables.NUM_CTX_SERVERS }} ctx urls, got {ctx_urls}'
+          assert len(gen_urls) == ${{ variables.NUM_GEN_SERVERS }}, f'expected ${{ variables.NUM_GEN_SERVERS }} gen urls, got {gen_urls}'
+          config = {
+              'hostname': '0.0.0.0',
+              'port': int('${PORT}'),
+              'backend': 'pytorch',
+              'context_servers': {'num_instances': len(ctx_urls), 'urls': ctx_urls, 'router': {'type': 'load_balancing'}},
+              'generation_servers': {'num_instances': len(gen_urls), 'urls': gen_urls, 'router': {'type': 'load_balancing'}}
+          }
+          with open('${MY_CONFIG}', 'w') as f:
+              yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+          "
+        - cat ${MY_CONFIG}
+        # Slurm uses --request_timeout 7200 --server_start_timeout 7200. The
+        # request timeout is doubled to 14400 because max_new_tokens is 20000
+        # and the highest-concurrency points queue far deeper than Slurm's
+        # dedicated-client allocation does; a frontend-side timeout shows up as
+        # client-side failures that look like a server fault.
+        - exec trtllm-serve disaggregated -c "${MY_CONFIG}" --request_timeout 14400 --server_start_timeout 7200
+      probes:
+        readiness:
+          log_watch:
+            match_pattern: "Application startup complete."
+            match_count: 1
+          timeout: 3600
+          interval: 10
+      depends_on:
+        - prefill_server
+        - decode_server
+
+    # =====================================================================
+    # LiveCodeBench service -- ported from the Slurm template's lcb_service.
+    # CPU-only, pinned to the client's node. Slurm starts it in EVERY mode
+    # (including perf) and the DSR1 README says to supply all three images, so
+    # the default here is on. With host_network the client reaches it at
+    # localhost:13835, which is the address Slurm's client uses too.
+    # =====================================================================
+    - name: lcb_service
+      operator: lcb
+      resources:
+        nodes:
+          # Quoted: a bare ${{ }} inside a YAML flow sequence is not valid
+          # YAML. sflow resolves the string and coerces it to int.
+          indices: ["${{ variables.BENCH_NODE_INDEX }}"]
+      script:
+        - set -uo pipefail
+        - |
+          if [ "${{ variables.WITH_LCB }}" != "true" ]; then
+            echo "LCB_SERVICE disabled (WITH_LCB=false): LiveCodeBench is NOT running."
+            echo "  MODE=${{ variables.MODE }}. This is only safe for MODE=perf."
+            echo "  An accuracy run that needs LCB will fail against localhost:${{ variables.LCB_PORT }}."
+            echo "LCB_SERVICE_READY"
+            exec sleep infinity
+          fi
+        - echo "lcb_service starting on port ${{ variables.LCB_PORT }} (localhost)"
+        - cd /app
+        - >
+          exec /app/venv/bin/uvicorn server:app --host 0.0.0.0
+          --port ${{ variables.LCB_PORT }} --timeout-keep-alive 7200
+          --ws-ping-interval 30 --ws-ping-timeout 10
+      probes:
+        readiness:
+          log_watch:
+            match_pattern: "re:Uvicorn running|LCB_SERVICE_READY"
+            match_count: 1
+          timeout: 600
+          interval: 5
+
+    # =====================================================================
+    # MLCommons Endpoints client. The Slurm template's endpoint_benchmark.
+    #
+    # This task carries all four Kimi-K3 result-collection fixes (conversion
+    # spec §5). Each of them cost a completed run.
+    # =====================================================================
+    - name: benchmark
+      operator: client
+      resources:
+        nodes:
+          # Quoted: a bare ${{ }} inside a YAML flow sequence is not valid
+          # YAML. sflow resolves the string and coerces it to int.
+          indices: ["${{ variables.BENCH_NODE_INDEX }}"]
+      depends_on:
+        - frontend_server
+        - lcb_service
+      script:
+        - set -euo pipefail
+        # -------------------------------------------------------------
+        # FIX 1: resolve the client interpreter BEFORE scrubbing the env.
+        #
+        # sflow starts task containers with `bash -l` (plugins/k8s/render.py:
+        # command: ["bash", "-l", <entrypoint>]). A login shell re-runs
+        # /etc/profile, which hard-assigns
+        #   PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+        # and so DISCARDS the image's ENV PATH. The endpoints client lives in a
+        # uv venv at $UV_PROJECT_ENVIRONMENT (/opt/venv) -- exactly what gets
+        # dropped. `python3` then becomes the bare system interpreter and the
+        # benchmark dies with
+        #   ModuleNotFoundError: No module named 'inference_endpoint'
+        # ...after the 18-node reservation and the full weight load.
+        #
+        # Ordinary env vars DO survive the login shell (only PATH is rewritten),
+        # so UV_PROJECT_ENVIRONMENT is a reliable anchor. The drop's own
+        # endpoint_env.yaml confirms the location: PATH=/opt/venv/bin:...
+        # -------------------------------------------------------------
+        - |
+          CLIENT_VENV="${UV_PROJECT_ENVIRONMENT:-/opt/venv}"
+          if [ -x "${CLIENT_VENV}/bin/python3" ]; then
+            export PATH="${CLIENT_VENV}/bin:${PATH}"
+          fi
+        - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+        - export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1
+        # Prove the client is runnable BEFORE anything expensive. By the time
+        # this task starts, 18 nodes are reserved and DeepSeek-R1 is resident
+        # on 72 GPUs. Discovering a bad CLIENT_IMAGE at the last line of the
+        # script wastes all of it; discovering it here costs seconds.
+        - |
+          echo "client interpreter: $(command -v python3)"
+          if ! python3 -c 'import inference_endpoint' 2>/dev/null; then
+            echo "FATAL: 'inference_endpoint' is not importable with $(command -v python3)." >&2
+            echo "  CLIENT_IMAGE=${{ variables.CLIENT_IMAGE }}" >&2
+            echo "  Either that image is not an MLCommons endpoints build, or its" >&2
+            echo "  virtualenv is not at \${UV_PROJECT_ENVIRONMENT:-/opt/venv}." >&2
+            echo "  Mirror ghcr.io/mlcommons/endpoints:e9f427c (arm64) and pass" >&2
+            echo "  -s CLIENT_IMAGE=<your registry copy>." >&2
+            exit 1
+          fi
+        # On Kubernetes a missing fs:// path is only a plan-time WARNING, and
+        # the Endpoints client falls back to a synthetic dataset with a message
+        # that is easy to miss in a 100k-line log. That silently invalidated
+        # three consecutive runs on this cluster. Refuse instead.
+        - |
+          if [ ! -f "${{ variables.DATA_PATH }}" ]; then
+            echo "FATAL: eval dataset not found at ${{ variables.DATA_PATH }}" >&2
+            echo "  Stage it on EVERY node: kubectl apply -f ../../stage-assets.yaml" >&2
+            echo "  A synthetic-fallback run is NOT comparable to the Slurm number" >&2
+            echo "  in either direction -- refusing to run." >&2
+            exit 1
+          fi
+        - |
+          if [ ! -d "${{ variables.MODEL_PATH }}" ]; then
+            echo "FATAL: tokenizer/model dir not found at ${{ variables.MODEL_PATH }}" >&2
+            echo "  The client tokenizes with this checkpoint; stage it on every node." >&2
+            exit 1
+          fi
+        - 'echo "dataset: $(ls -l ${{ variables.DATA_PATH }})"'
+        - sha256sum ${{ variables.DATA_PATH }} 2>/dev/null || echo "(sha256sum unavailable in this image)"
+        # client.yaml refers to ${MODEL_PATH} / ${DATA_PATH} exactly as the
+        # Slurm copy does; only the values differ (node-local, not shared FS).
+        - export MODEL_PATH=${{ variables.MODEL_PATH }}
+        - export DATA_PATH=${{ variables.DATA_PATH }}
+        # v1.0.2's endpoint_env.yaml sets exactly HF_HOME=/tmp/hf_cache and
+        # TIKTOKEN_RS_CACHE_DIR=/tmp/hf_cache/tiktoken_rs (v1.0.1: the shared
+        # /hf_cache mount), so these are now verbatim; the generator refuses a
+        # drop that changes them. HF_HUB_CACHE + mkdir are GKE additions.
+        - export HF_HOME=/tmp/hf_cache
+        - export HF_HUB_CACHE=/tmp/hf_cache/hub
+        - export TIKTOKEN_RS_CACHE_DIR=/tmp/hf_cache/tiktoken_rs
+        - mkdir -p /tmp/hf_cache/hub /tmp/hf_cache/tiktoken_rs
+        # -------------------------------------------------------------
+        # FIX 3: durable report_dir on a hostPath.
+        # Print the node and path LOUDLY and EARLY -- once the pod is gone this
+        # line is how the results are found. If the log stream stalls later
+        # (Kimi C192 stalled for 7,474 s), this has already been delivered.
+        # -------------------------------------------------------------
+        - |
+          export REPORT_DIR="${{ artifacts.REPORTS_DIR.path }}/$(basename "${SFLOW_WORKFLOW_OUTPUT_DIR}")"
+          mkdir -p "${REPORT_DIR}"
+          echo "DSR1_REPORT_DIR node=${SFLOW_TASK_NODE_NAME:-$(hostname)} path=${REPORT_DIR}"
+        # GKE replacement for the Slurm template's generate_endpoint_yaml.py:
+        # fill endpoint_config.endpoints from the FRONTEND_URLS artifact. Done
+        # as a yaml round-trip so every other key -- submission_ref, the
+        # accuracy dataset, this point's timeouts/warmup blocks, and the
+        # ${VAR} placeholders the client expands itself -- survives untouched.
+        #
+        # GKE EDIT (guard; a no-op for every v1.0.1/v1.0.2 point): warmup.salt
+        # true -> false in the RESOLVED copy only. The v1.0.1 and v1.0.2 drops
+        # (byte-identical client.yaml) disable
+        # warmup on every point (enabled: false, salt: false), so this only
+        # fires if a future drop re-enables it. In v1.0.0, points
+        # 2048/8192/16384/28080 shipped `warmup: {enabled, salt, drain}:
+        # true`, and the e9f427c client aborted before issuing anything with
+        #   "sample has 'input_tokens'; salt cannot bust a pre-tokenized cache"
+        # because the DSR1 parquet is pre-tokenized (C2048 16-node run,
+        # 2026-09-30, after the full 10 min server bring-up). Salt only exists
+        # to defeat prefix-cache reuse between warmup and the timed phase, and
+        # every server here runs kv_cache_config.enable_block_reuse: false --
+        # there is no prefix cache, so this is measurement-neutral. Warmup
+        # itself (enabled/drain) is kept.
+        - |
+          python3 -c "
+          import sys, yaml
+          raw = [u.strip() for u in open('${{ artifacts.FRONTEND_URLS.path }}').read().splitlines() if u.strip()]
+          if not raw:
+              sys.exit('FATAL: FRONTEND_URLS artifact is empty -- no frontend registered.')
+          urls = [u if u.startswith('http') else 'http://' + u for u in raw]
+          cfg = yaml.safe_load(open('${{ artifacts.CLIENT_CONFIG.path }}'))
+          assert cfg['endpoint_config']['endpoints'] == [], 'client.yaml endpoints are not empty; refusing to overwrite'
+          cfg['endpoint_config']['endpoints'] = urls
+          warm = (cfg.get('settings') or dict()).get('warmup')
+          if isinstance(warm, dict) and warm.get('salt'):
+              warm['salt'] = False
+              print('GKE EDIT: warmup.salt true -> false (pre-tokenized dataset; enable_block_reuse is false)')
+          yaml.dump(cfg, open('/tmp/endpoint_resolved.yaml', 'w'), default_flow_style=False, sort_keys=False)
+          print('frontend endpoints:', urls)
+          "
+        - cat /tmp/endpoint_resolved.yaml
+        # -------------------------------------------------------------
+        # FIX 2: NO `exec` HERE -- LOAD-BEARING.
+        #
+        # sflow installs `trap _sflow_collect EXIT` in the entrypoint shell
+        # (k8s_operator.py:376). That trap tars up $SFLOW_WORKFLOW_OUTPUT_DIR,
+        # prints `[[sflow-collect-ready]]`, and holds the container open for
+        # collect_grace_seconds so the driver can copy results back. `exec`
+        # REPLACES the shell process and destroys the trap: the marker is never
+        # printed and the driver gives up with
+        #   "pod reached a terminal phase without either collect sentinel
+        #    appearing ...: node-local output was NOT collected"
+        # Observed for real on the Kimi-K3 C24 run -- 39869/39869 samples
+        # completed and the entire report/ died with the pod. `exec` is correct
+        # for the server tasks above; it is wrong here, because this is the only
+        # task that produces artifacts.
+        # -------------------------------------------------------------
+        - >
+          inference-endpoint benchmark from-config
+          -c /tmp/endpoint_resolved.yaml --mode ${{ variables.MODE }}
+        # Belt and braces: also place the SMALL report files where sflow's
+        # normal collect can pick them up, so a healthy run needs no manual
+        # fetch. events.jsonl is excluded deliberately -- it is far over
+        # collect_max_file_size and the durable copy on the node has it.
+        # `|| true` because a failure here must never mask the benchmark's own
+        # exit code; the node-local copy already exists either way.
+        - |
+          DEST="${SFLOW_WORKFLOW_OUTPUT_DIR}/report"
+          mkdir -p "${DEST}"
+          ( cd "${REPORT_DIR}" \
+            && find . -type f ! -name 'events.jsonl' -print0 \
+               | tar cf - --null -T - ) 2>/dev/null \
+            | ( cd "${DEST}" && tar xf - ) 2>/dev/null || true
+          echo "mirrored report -> ${DEST}:"
+          ls -la "${DEST}" || true
+          echo "durable copy retained on node at ${REPORT_DIR}"

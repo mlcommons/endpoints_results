@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""Single-node stand-in for Slurm's `srun`, for the Kimi-K3 SWE-bench service on GKE only.
+
+On Slurm, the drop's Enroot transport (NVIDIA/src/kimi-k3/scripts/swe-enroot-transport.py,
+appended to the pinned endpoints c97ddfcce `pyxis_environment.py`) launches every sandbox
+command as a Slurm step on the node that runs the service. It always emits exactly:
+
+    srun --overlap --jobid=J -N1 -n1 --nodelist=N --chdir=D --job-name=S CMD...
+
+GKE has no Slurm, and the service runs in a privileged pod on that node. This shim accepts
+only that exact shape and checks it against this pod. It then changes to D and execs CMD with
+the environment unchanged. That keeps stdout/stderr and the exit code untouched: the pinned
+runtime uses them as the agent observation and as the step status (`finished:<rc>`). The shim
+prints nothing on success.
+
+CMD must be one of the forms the pinned code emits:
+  * bash --noprofile --norc -c <script>       (sandbox steps: import/create/start + command)
+  * enroot list -f                            (runner cleanup)
+  * enroot remove -f pyxis_<name>             (environment/runner cleanup)
+Anything else is rejected with exit 2. That includes Pyxis `--container-*` flags, which mean
+the drop's transport patch was not applied.
+
+The pod's entry script writes the expected job id and node name to /opt/kimi-swe/shim.json,
+because the pinned runtime allow-lists the srun environment and SLURM_* never reaches here.
+"""
+import json
+import os
+import re
+import socket
+import sys
+
+CONF_PATH = "/opt/kimi-swe/shim.json"
+SCRATCH_ROOT = "/tmp"
+SCRATCH_PREFIX = "kimi-swe-"            # swe-service.py: mkdtemp(prefix='kimi-swe-', dir='/tmp')
+FLAGS = ("--overlap", "-N1", "-n1")
+KEYS = ("--jobid", "--nodelist", "--chdir", "--job-name")
+NAME_RE = re.compile(r"pyxis_[A-Za-z0-9_.-]+")   # same rule as the drop's transport
+
+
+def die(msg, code=2):
+    sys.stderr.write(f"srun-shim: {msg}\n")
+    sys.exit(code)
+
+
+def load_conf():
+    try:
+        with open(CONF_PATH, encoding="utf-8") as f:
+            conf = json.load(f)
+    except (OSError, ValueError) as exc:
+        die(f"cannot read {CONF_PATH}: {exc}")
+    if not isinstance(conf, dict) or not conf.get("jobid") or not conf.get("node"):
+        die(f"{CONF_PATH} must define jobid and node")
+    return conf
+
+
+def parse(argv):
+    flags, opts, i = set(), {}, 0
+    while i < len(argv) and argv[i].startswith("-"):
+        arg = argv[i]
+        i += 1
+        if arg == "--":
+            break
+        if arg in FLAGS:
+            flags.add(arg)
+            continue
+        key, sep, val = arg.partition("=")
+        if sep and key in KEYS:
+            if key in opts:
+                die(f"duplicate option {key}")
+            opts[key] = val
+            continue
+        die(f"unsupported srun option {arg!r}")
+    return flags, opts, argv[i:]
+
+
+def inside_scratch(path):
+    """True if the resolved path is strictly below /tmp/kimi-swe-<x>/ (boundary-safe)."""
+    real = os.path.realpath(path)
+    rel = os.path.relpath(real, SCRATCH_ROOT)
+    if rel.startswith(os.pardir) or os.path.isabs(rel):
+        return False
+    first = rel.split(os.sep, 1)[0]
+    return first.startswith(SCRATCH_PREFIX) and len(first) > len(SCRATCH_PREFIX)
+
+
+def check_command(cmd):
+    if cmd[:4] == ["bash", "--noprofile", "--norc", "-c"] and len(cmd) == 5:
+        return
+    if cmd == ["enroot", "list", "-f"]:
+        return
+    if len(cmd) == 4 and cmd[:3] == ["enroot", "remove", "-f"] and NAME_RE.fullmatch(cmd[3]):
+        return
+    die("command is not one the pinned SWE transport emits: "
+        + " ".join(repr(c) for c in cmd[:4]))
+
+
+def main():
+    conf = load_conf()
+    flags, opts, cmd = parse(sys.argv[1:])
+    if flags != set(FLAGS):
+        die("expected exactly --overlap -N1 -n1")
+    missing = [k for k in KEYS if not opts.get(k)]
+    if missing:
+        die("missing " + ", ".join(missing))
+    if opts["--jobid"] != str(conf["jobid"]):
+        die("--jobid does not match this pod's allocation id")
+    if opts["--nodelist"] not in (str(conf["node"]), socket.gethostname().split(".")[0]):
+        die("--nodelist does not name this node")
+    step = os.environ.get("SWE_STEP_NAME", "")
+    if not step or opts["--job-name"] != step:
+        die("--job-name does not match SWE_STEP_NAME")
+    if not inside_scratch(opts["--chdir"]):
+        die("--chdir is not inside this service's /tmp/kimi-swe-* scratch")
+    if not cmd:
+        die("missing command")
+    check_command(cmd)
+    try:
+        os.chdir(opts["--chdir"])
+    except OSError as exc:
+        die(f"chdir failed: {exc}")
+    # Plain exec, as on Slurm when srun itself is SIGKILLed on a timeout: the step's
+    # processes are not killed here. The drop's teardown (swe_cleanup.owned_pids) finds
+    # leftovers by SWE_STEP_NAME and stops them.
+    try:
+        os.execvp(cmd[0], cmd)
+    except OSError as exc:
+        die(f"exec failed: {exc}", 127)
+
+
+if __name__ == "__main__":
+    main()

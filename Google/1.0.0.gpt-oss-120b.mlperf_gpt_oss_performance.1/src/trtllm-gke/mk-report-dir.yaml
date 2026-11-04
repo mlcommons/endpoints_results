@@ -1,0 +1,83 @@
+# Create the durable GPT-OSS report directory on every node.
+#
+# WHY THIS EXISTS
+# ---------------
+# sflow gives each task an emptyDir at $SFLOW_WORKFLOW_OUTPUT_DIR and copies it
+# back to the driver via an EXIT-trap plus a sentinel printed to the pod log.
+# That channel failed twice in the Kimi-K3 sweep, for two different reasons,
+# both times AFTER a flawless benchmark:
+#
+#   C24  -- `exec` in the task replaced the shell, destroying the EXIT trap, so
+#           `[[sflow-collect-ready]]` was never printed.  39869/39869 samples
+#           completed and report/ died with the pod.
+#   C192 -- the client went silent for 2 h 05 m during its tokenization drain,
+#           `kubectl logs` stalled for 7,474 s, the sentinel could not be
+#           delivered at all, and the emptyDir was destroyed with the pod.
+#
+# A hostPath on the node's local SSD depends on none of that: the bytes are
+# simply still on the node afterwards and can be fetched whenever.  The recipes
+# write report_dir there (the REPORTS_DIR artifact) and additionally mirror the
+# small files back into the normal output dir as belt and braces.
+#
+# The directory must PRE-EXIST because sflow mounts fs:// with a strict
+# `Directory` volume type -- kubelet refuses the pod rather than silently
+# creating an empty dir.  That strictness is deliberate and good; it just means
+# the directory gets created once, here.
+#
+# GPT-OSS runs up to n_samples_to_issue 953,004 at C7168, so the report is not
+# small.  These nodes have ~11 TB of local SSD; an empty directory costs nothing
+# and the reports are a few GB at worst (events.jsonl excluded from the
+# mirror-back, see the recipes).
+#
+#   kubectl apply -f mk-report-dir.yaml
+#   kubectl rollout status ds/gptoss-mk-report-dir --timeout=300s
+#   kubectl delete -f mk-report-dir.yaml      # the directory persists
+#
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gptoss-mk-report-dir
+spec:
+  selector:
+    matchLabels:
+      app: gptoss-mk-report-dir
+  template:
+    metadata:
+      labels:
+        app: gptoss-mk-report-dir
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: <nodepool>
+      tolerations:
+        - key: "kubernetes.io/arch"
+          operator: "Equal"
+          value: "arm64"
+          effect: "NoSchedule"
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: mkdir
+          # Multi-arch with a shell; the nodes are arm64, so a single-arch
+          # amd64 image would crash-loop with "exec format error".
+          image: <registry>/cloudsdktool/google-cloud-cli:stable
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              D=/host-ssd/gptoss-reports
+              mkdir -p "$D"
+              chmod 1777 "$D"   # the client pod runs as root, but keep it open
+              echo "ready: $(ls -ld "$D")"
+              df -h /host-ssd | tail -1
+              sleep infinity
+          volumeMounts:
+            - name: host-ssd
+              mountPath: /host-ssd
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+      volumes:
+        - name: host-ssd
+          hostPath:
+            path: <node-local-ssd>
+            type: Directory

@@ -1,0 +1,1617 @@
+{
+  "chunk_chars": 60000,
+  "config": "default",
+  "count": 200,
+  "data_bytes": 169149,
+  "data_file": "oracle-data.json.gz",
+  "data_sha256": "3f8787cdff2a3401f6d22614c0740f3705f8d5c4200d9eef4079cc21fef5f315",
+  "dataset": "princeton-nlp/SWE-bench_Verified",
+  "fetched_at": "2026-10-06T17:28:37Z",
+  "instances": [
+    {
+      "instance_id": "astropy__astropy-12907",
+      "patch_base64_chars": 628,
+      "patch_bytes": 470,
+      "patch_has_cr": false,
+      "patch_sha256": "0f3e44432ed8540e9526edff4f83793948a2f139fc3971b67c30043c1eb7964a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-13033",
+      "patch_base64_chars": 1984,
+      "patch_bytes": 1486,
+      "patch_has_cr": false,
+      "patch_sha256": "7de34e6ed106dd91f81473f3646ed1340692a28c437324bf78adaf093d2c0c8d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-13236",
+      "patch_base64_chars": 1140,
+      "patch_bytes": 853,
+      "patch_has_cr": false,
+      "patch_sha256": "e3366b1923660fb0ae2bbc8fb16981184e77fc3f9e3669727f1a3e6061ddaa6d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-13398",
+      "patch_base64_chars": 18512,
+      "patch_bytes": 13884,
+      "patch_has_cr": false,
+      "patch_sha256": "5124ad079250b10166141d9deeb28d2cdf58ca42e50fb898b0ec8819bacc06e1",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-13453",
+      "patch_base64_chars": 684,
+      "patch_bytes": 512,
+      "patch_has_cr": false,
+      "patch_sha256": "7f579408e4ad94b129886283f9c6df7d27d3965e2aaaa88141045515dd4710d9",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-13579",
+      "patch_base64_chars": 1364,
+      "patch_bytes": 1023,
+      "patch_has_cr": false,
+      "patch_sha256": "3b039e1e3ea35e64bb09b0b59d7b46d6190d2196972a8e9fe7383957f299d068",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-13977",
+      "patch_base64_chars": 7704,
+      "patch_bytes": 5777,
+      "patch_has_cr": false,
+      "patch_sha256": "6a2d03521c0568e0943442ff42743ebafb4d7785c793d63b6a21a6d2b19123da",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14096",
+      "patch_base64_chars": 972,
+      "patch_bytes": 728,
+      "patch_has_cr": false,
+      "patch_sha256": "57a810467af331eba7c3238bbcd78268a47e96ad75eed3e2aa8b908da99104bc",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14182",
+      "patch_base64_chars": 2916,
+      "patch_bytes": 2186,
+      "patch_has_cr": false,
+      "patch_sha256": "1c80b57d515ed4da42842dff56cfec5b5c72fee6a469c9bb33f2f6b59dba0f3c",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14309",
+      "patch_base64_chars": 792,
+      "patch_bytes": 592,
+      "patch_has_cr": false,
+      "patch_sha256": "26e70ac624185594670bdc18cb5e9f3cf38089eaefeb29044d9b76672e2c1b3e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14365",
+      "patch_base64_chars": 1276,
+      "patch_bytes": 955,
+      "patch_has_cr": false,
+      "patch_sha256": "42420ff7003feddd01ddde186a66486ab686dc91af2a3155970dea6ca4df63c3",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14369",
+      "patch_base64_chars": 16132,
+      "patch_bytes": 12099,
+      "patch_has_cr": false,
+      "patch_sha256": "f58ccaa7b95c38a3d9ee7c950a51e98e34ca30e9f778e74338f4fadc450ad055",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14508",
+      "patch_base64_chars": 2024,
+      "patch_bytes": 1517,
+      "patch_has_cr": false,
+      "patch_sha256": "2955ac3e9847adc00347a95339bc2661089a9f727964118aae7063464a96c02a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14539",
+      "patch_base64_chars": 644,
+      "patch_bytes": 481,
+      "patch_has_cr": false,
+      "patch_sha256": "6df2a31458ccb6444253ea103006830eeb96f9a89eb9db2959f46060a28fe691",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14598",
+      "patch_base64_chars": 1284,
+      "patch_bytes": 963,
+      "patch_has_cr": false,
+      "patch_sha256": "867bc2472fb6f36b4bb180ae83d94b99533948f51c0f16f1e666dd87c9d4c396",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-14995",
+      "patch_base64_chars": 1160,
+      "patch_bytes": 869,
+      "patch_has_cr": false,
+      "patch_sha256": "370b3ff97b3a0627c29b74cf0b60bae46fe75edcd35a8d121c2dbe0f0421899a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-7166",
+      "patch_base64_chars": 1556,
+      "patch_bytes": 1165,
+      "patch_has_cr": false,
+      "patch_sha256": "b720439fe90e5673cf5d75523a36c25927c9f78f785f280508433447293be578",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-7336",
+      "patch_base64_chars": 948,
+      "patch_bytes": 709,
+      "patch_has_cr": false,
+      "patch_sha256": "11f006a6ea5c6b90a0dfd5687f096bf7263c1c6adc9fe3c15874733983f3bc8a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-7606",
+      "patch_base64_chars": 1416,
+      "patch_bytes": 1062,
+      "patch_has_cr": false,
+      "patch_sha256": "af5731a54158ba6516ce223c9e7e42bf9c2e2c761d5f3fdce3701179886ce114",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-7671",
+      "patch_base64_chars": 1216,
+      "patch_bytes": 910,
+      "patch_has_cr": false,
+      "patch_sha256": "42828c5c129810409cbbf1882df2b6c7f82d613261b8c9da70cb2ac67a184ab3",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-8707",
+      "patch_base64_chars": 6844,
+      "patch_bytes": 5131,
+      "patch_has_cr": false,
+      "patch_sha256": "f993c1ada6f19bcdfa8989e0c1c61151cd881a81d549f2789663270537c093f2",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "astropy__astropy-8872",
+      "patch_base64_chars": 2232,
+      "patch_bytes": 1674,
+      "patch_has_cr": false,
+      "patch_sha256": "3c94cbaa3a1c5b44d16801d41191f98136a6d83e9bfc723a29569c671520ca6e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-10097",
+      "patch_base64_chars": 752,
+      "patch_bytes": 562,
+      "patch_has_cr": false,
+      "patch_sha256": "6a3f90e1cd4c886a22787c9388683d57ce177ad4fbb2144dc51db8b6bb0edab4",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-10554",
+      "patch_base64_chars": 2072,
+      "patch_bytes": 1554,
+      "patch_has_cr": false,
+      "patch_sha256": "98523eeb6147f2d4be05885f8e4f49a8505b3368c2e1ec4ecd39ea9fc880105d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-10880",
+      "patch_base64_chars": 812,
+      "patch_bytes": 609,
+      "patch_has_cr": false,
+      "patch_sha256": "368159ac79ebf4e6772a128199ec8d64b4e5db571d99bce2d0dec42733974e31",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-10914",
+      "patch_base64_chars": 776,
+      "patch_bytes": 582,
+      "patch_has_cr": false,
+      "patch_sha256": "00d87c8dceb745fb6e4d5b9a7ed128cfc97054d46eb4ba23e82f0d9768eae56f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-10973",
+      "patch_base64_chars": 3248,
+      "patch_bytes": 2434,
+      "patch_has_cr": false,
+      "patch_sha256": "b2453aaccb4103cf8c98e9c27a1f4d73fa3cc0f610e9694a5e54d3870e301c2b",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-10999",
+      "patch_base64_chars": 696,
+      "patch_bytes": 520,
+      "patch_has_cr": false,
+      "patch_sha256": "5f79fbb7e321b24ac8090df846218a64ff35048433bc1c818f1cbfd72ad58aab",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11066",
+      "patch_base64_chars": 996,
+      "patch_bytes": 746,
+      "patch_has_cr": false,
+      "patch_sha256": "ee3b84ed76d44a90804ae0af1440ddc0edeedfcfcdd3a991df3be3cdcdd65848",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11087",
+      "patch_base64_chars": 4248,
+      "patch_bytes": 3186,
+      "patch_has_cr": false,
+      "patch_sha256": "38dfd449272afdf7269e56d798668fd4167db5c34c775614ca0b2fb47eb25789",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11095",
+      "patch_base64_chars": 1260,
+      "patch_bytes": 945,
+      "patch_has_cr": false,
+      "patch_sha256": "07f41206809adfd7ee84e077b441ac4a048e5250ad0e4c5c1667abff8e4bd048",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11099",
+      "patch_base64_chars": 1080,
+      "patch_bytes": 808,
+      "patch_has_cr": false,
+      "patch_sha256": "cf203df5a90df3747f2d9a59cb0d02620d70228c29cb0c3477e5509056c19c09",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11119",
+      "patch_base64_chars": 656,
+      "patch_bytes": 492,
+      "patch_has_cr": false,
+      "patch_sha256": "3d9645b53ff296d6e932fb375ea417a6186106c60eec6aa74c8319db2c0d820b",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11133",
+      "patch_base64_chars": 776,
+      "patch_bytes": 581,
+      "patch_has_cr": false,
+      "patch_sha256": "a0fd6d0a4a1c733a1c6f98cbb524604ea24e643c26c5fcb152be4bfb29fb1c3d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11138",
+      "patch_base64_chars": 10064,
+      "patch_bytes": 7548,
+      "patch_has_cr": false,
+      "patch_sha256": "9ae4408e05d1a96259df33cc7606befd29e043cfb334bfecbf254fd643df0cb8",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11141",
+      "patch_base64_chars": 2028,
+      "patch_bytes": 1519,
+      "patch_has_cr": false,
+      "patch_sha256": "924503df37ffda93f8c76bb1d615f2c5cd8a16f914bd76d63e9072de676514ee",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11149",
+      "patch_base64_chars": 5692,
+      "patch_bytes": 4267,
+      "patch_has_cr": false,
+      "patch_sha256": "077062cb36a86d4934793049aaec9f5e5ed8910c5df8ebf384992d114b531946",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11163",
+      "patch_base64_chars": 712,
+      "patch_bytes": 534,
+      "patch_has_cr": false,
+      "patch_sha256": "9a949d65f5bc033837aecc943990cd9a49c550dcc3bb820e111385f791991f47",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11179",
+      "patch_base64_chars": 772,
+      "patch_bytes": 579,
+      "patch_has_cr": false,
+      "patch_sha256": "a1896338de07ff4fa040d7e692a1c954e44f3cac29f6db8bd7f15820a123b45f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11206",
+      "patch_base64_chars": 1108,
+      "patch_bytes": 831,
+      "patch_has_cr": false,
+      "patch_sha256": "2e311025f3a17cb4089d7e9e54928e06c11399cfc1ac07d2eeaf713338a0e618",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11211",
+      "patch_base64_chars": 704,
+      "patch_bytes": 527,
+      "patch_has_cr": false,
+      "patch_sha256": "d09c1eff4eb13be7283fdef31426f86222cf8b059623b4b95c4ef8a1d1544a42",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11239",
+      "patch_base64_chars": 1696,
+      "patch_bytes": 1270,
+      "patch_has_cr": false,
+      "patch_sha256": "6d9a0d621741ea9e6a75c38d425a9710dfe7de7a7bb670be9dcb8f18ca45f996",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11265",
+      "patch_base64_chars": 2224,
+      "patch_bytes": 1668,
+      "patch_has_cr": false,
+      "patch_sha256": "eed78ca4d81f792f7caa6f2852d8d3de82d9a800fb729589f2b92be69ced9658",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11276",
+      "patch_base64_chars": 3684,
+      "patch_bytes": 2762,
+      "patch_has_cr": false,
+      "patch_sha256": "5761045d565f2556d76e80f044ba621211970ca1d9d04d21da7a18938fe0fbdb",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11292",
+      "patch_base64_chars": 2284,
+      "patch_bytes": 1713,
+      "patch_has_cr": false,
+      "patch_sha256": "e4fc7483fb118b7f599eb23cdd3657e74f6b880f257ebd21a631d3582995e7b4",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11299",
+      "patch_base64_chars": 888,
+      "patch_bytes": 666,
+      "patch_has_cr": false,
+      "patch_sha256": "e3e2fe9c2eb1ce40f8387f76c46ad82e1e73abe93c15ed336578d9436f19000a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11333",
+      "patch_base64_chars": 1648,
+      "patch_bytes": 1236,
+      "patch_has_cr": false,
+      "patch_sha256": "eda6a87fe39c2bc8b3b136c10053d2c59a7134c35224f0fd762b00ad8662b21d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11400",
+      "patch_base64_chars": 4300,
+      "patch_bytes": 3224,
+      "patch_has_cr": false,
+      "patch_sha256": "15eacae4cdbd410dc9d6d210a565aaf1466679c654974c820c81398886c6a21f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11433",
+      "patch_base64_chars": 1264,
+      "patch_bytes": 946,
+      "patch_has_cr": false,
+      "patch_sha256": "96ea03285f7bbb0836cf23b036102635ec93497018830e40d3d6844ea6e893b2",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11451",
+      "patch_base64_chars": 768,
+      "patch_bytes": 575,
+      "patch_has_cr": false,
+      "patch_sha256": "36c3152d40b1b5653734204552615181633beaba076540961ba2153f2e817f7d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11477",
+      "patch_base64_chars": 816,
+      "patch_bytes": 610,
+      "patch_has_cr": false,
+      "patch_sha256": "cba46df40568af2ead931ad6cae5686321100e5193ee8fdc732227d034ac3ae2",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11490",
+      "patch_base64_chars": 900,
+      "patch_bytes": 675,
+      "patch_has_cr": false,
+      "patch_sha256": "0852350a723751f2b8009bafa4998709c3f7c4f2173c220c7dc041259a61defc",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11532",
+      "patch_base64_chars": 6036,
+      "patch_bytes": 4525,
+      "patch_has_cr": false,
+      "patch_sha256": "7cc347f6cafe297ddfe4f7401b4b78cfa1b3500c998448afd58c6dea4f0c8a73",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11551",
+      "patch_base64_chars": 3332,
+      "patch_bytes": 2499,
+      "patch_has_cr": false,
+      "patch_sha256": "367733f3b108fc9a03f26d22c0984699618604de6d7360be45b4d8e4de67864f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11555",
+      "patch_base64_chars": 840,
+      "patch_bytes": 630,
+      "patch_has_cr": false,
+      "patch_sha256": "ec98c6e628ecd3c7d70d69b0c4bfdfc065173fdb06f56222b5e993ae6288d3ec",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11603",
+      "patch_base64_chars": 780,
+      "patch_bytes": 584,
+      "patch_has_cr": false,
+      "patch_sha256": "1d7809e0c60ece4579ab1ab8e1ef21f2c22d51de12d8b3af3a5002eb5bba02ce",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11728",
+      "patch_base64_chars": 4408,
+      "patch_bytes": 3304,
+      "patch_has_cr": false,
+      "patch_sha256": "7da97e8979686c7a8e8884e857718385f9c40207572ee5ca76e43771a03af9f9",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11734",
+      "patch_base64_chars": 2772,
+      "patch_bytes": 2077,
+      "patch_has_cr": false,
+      "patch_sha256": "e4e2f3f5febec4ba6e566a4348783425a66d0609c8179b696573f85acef24d8e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11740",
+      "patch_base64_chars": 2372,
+      "patch_bytes": 1777,
+      "patch_has_cr": false,
+      "patch_sha256": "87a8df03c5a6c48e26c26af2b41d2c9d67e197947dfb94bdbda1f07a3c613d85",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11749",
+      "patch_base64_chars": 1364,
+      "patch_bytes": 1022,
+      "patch_has_cr": false,
+      "patch_sha256": "768a8bfdaec7971c2d895c9cee0575c7825baa2f526bc4c69b01711311d05366",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11790",
+      "patch_base64_chars": 1076,
+      "patch_bytes": 806,
+      "patch_has_cr": false,
+      "patch_sha256": "45134a10c54998cc6a8454e4a13ecf9366976fe6876aa64ae59317e229304c3a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11815",
+      "patch_base64_chars": 988,
+      "patch_bytes": 739,
+      "patch_has_cr": false,
+      "patch_sha256": "e7cfb008e4f5503b6a74d94e9bb2c4301a133ca0424287540872575d8a51db50",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11820",
+      "patch_base64_chars": 1228,
+      "patch_bytes": 919,
+      "patch_has_cr": false,
+      "patch_sha256": "30807ea49320fe21c5e54933a8c371bf107f95453d126084ffacbe6ac6740958",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11848",
+      "patch_base64_chars": 1160,
+      "patch_bytes": 869,
+      "patch_has_cr": false,
+      "patch_sha256": "b191d42210619eb4b8782204197cded82b2937c4db321e13ca23230475143cc4",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11880",
+      "patch_base64_chars": 572,
+      "patch_bytes": 427,
+      "patch_has_cr": false,
+      "patch_sha256": "8c47d5fdef900230cb6fd10f627d6b0efeb792d704526a476d0ffe6c0e2dd3e9",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11885",
+      "patch_base64_chars": 14424,
+      "patch_bytes": 10818,
+      "patch_has_cr": false,
+      "patch_sha256": "c3097c2e23c45888542b92364d2b727bdd0ed58b6527e7cf530e7b75f3006e64",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11951",
+      "patch_base64_chars": 1204,
+      "patch_bytes": 901,
+      "patch_has_cr": false,
+      "patch_sha256": "b382abb1894bfce82e22ecdfdba4ee2f0e2204848fd62933935d4785652ec85b",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11964",
+      "patch_base64_chars": 748,
+      "patch_bytes": 559,
+      "patch_has_cr": false,
+      "patch_sha256": "5df808eec57ca720def54b40bc2695b724f2d62fa767a7586342af4856936cfd",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-11999",
+      "patch_base64_chars": 1160,
+      "patch_bytes": 870,
+      "patch_has_cr": false,
+      "patch_sha256": "bd5d283307e59b9a05f5ca0df57565026fde3fa399c1a067425bfda397bd261d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12039",
+      "patch_base64_chars": 1692,
+      "patch_bytes": 1268,
+      "patch_has_cr": false,
+      "patch_sha256": "effee99739f097a0c1d323f5d3341bc14cf6eb07ab0add68b52f3447f3abd462",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12050",
+      "patch_base64_chars": 1884,
+      "patch_bytes": 1412,
+      "patch_has_cr": false,
+      "patch_sha256": "04c9ecae01f74edca1d9ff56d3a9330946ce76573530444ebb67079338a0d913",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12125",
+      "patch_base64_chars": 728,
+      "patch_bytes": 546,
+      "patch_has_cr": false,
+      "patch_sha256": "0f3465569d4d1caca96c6f4e2b310185239ee9490dbe62917a557e508978db9f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12143",
+      "patch_base64_chars": 996,
+      "patch_bytes": 745,
+      "patch_has_cr": false,
+      "patch_sha256": "ff2a1294407a9bc32b7304c56c15106b35f46243f4d601ccd72be5b2d09b5fc6",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12155",
+      "patch_base64_chars": 3024,
+      "patch_bytes": 2268,
+      "patch_has_cr": false,
+      "patch_sha256": "b9fe08301b7bcda6d724d253fa522266487c71d4e27e3b6f099e3fd92232532c",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12193",
+      "patch_base64_chars": 700,
+      "patch_bytes": 525,
+      "patch_has_cr": false,
+      "patch_sha256": "5cca9d8a9087d9d37fc7449d5c059f9c9441dd9b521d2e2e02e2198e41250c27",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12209",
+      "patch_base64_chars": 620,
+      "patch_bytes": 464,
+      "patch_has_cr": false,
+      "patch_sha256": "8b6faac051cb276f5af3fb2d7babb7816f160ff5882e71d00311f53c3ff376f9",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12262",
+      "patch_base64_chars": 908,
+      "patch_bytes": 680,
+      "patch_has_cr": false,
+      "patch_sha256": "9ec3e3ad1dd4c1993e6c0fb4698939f8f7eb192128fe0d696add4abb969e7037",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12273",
+      "patch_base64_chars": 752,
+      "patch_bytes": 563,
+      "patch_has_cr": false,
+      "patch_sha256": "97ebd53485bbd8c351c8cd1f63f55ba5cc8997e1401ce305dc8040ad351abaeb",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12276",
+      "patch_base64_chars": 1120,
+      "patch_bytes": 839,
+      "patch_has_cr": false,
+      "patch_sha256": "104ede2ba3131ad8512548dd6dc6b15e87152b3a82241aba7975a7810dd009ba",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12304",
+      "patch_base64_chars": 680,
+      "patch_bytes": 510,
+      "patch_has_cr": false,
+      "patch_sha256": "d0de5e22f6c38c314279df50abe9c37ce6901ded00e7155d7958e753d4d624f9",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12308",
+      "patch_base64_chars": 912,
+      "patch_bytes": 684,
+      "patch_has_cr": false,
+      "patch_sha256": "5b01ba6570e402108145db119391aed9bf82b0030d8ba41b6e4a56bd3b9446d2",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12325",
+      "patch_base64_chars": 2152,
+      "patch_bytes": 1614,
+      "patch_has_cr": false,
+      "patch_sha256": "88a576600f625378c478021c4415421bda24b1146750e27616b7f4b47d855384",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12406",
+      "patch_base64_chars": 2888,
+      "patch_bytes": 2165,
+      "patch_has_cr": false,
+      "patch_sha256": "b6b2baa9c9acf5d945e985719aafb64dbd0a1c8c0e18447f9c5e5655d5202fee",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12419",
+      "patch_base64_chars": 532,
+      "patch_bytes": 399,
+      "patch_has_cr": false,
+      "patch_sha256": "a1f6c1f9598eda33d4de4b85f018d759390b8e6c951af3f554b9df5b90ff7862",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12663",
+      "patch_base64_chars": 776,
+      "patch_bytes": 580,
+      "patch_has_cr": false,
+      "patch_sha256": "aef228ae701c14326bd26e73cf69a58b990952a9d9368df51666bc9d29aa880f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12708",
+      "patch_base64_chars": 1136,
+      "patch_bytes": 850,
+      "patch_has_cr": false,
+      "patch_sha256": "03645a06338c386b3596536f4fc0be3522e41df03185b96cb9f87d90ad52fa86",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12713",
+      "patch_base64_chars": 2648,
+      "patch_bytes": 1986,
+      "patch_has_cr": false,
+      "patch_sha256": "a99542c2cd4921f681ec42111964372a0d6dffbfc717c8f5ab06b0b5b63abc63",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12741",
+      "patch_base64_chars": 2036,
+      "patch_bytes": 1527,
+      "patch_has_cr": false,
+      "patch_sha256": "4092d481eddfdf2c6cb1201f684edc689699a27af77bfa78590187f92864191a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12754",
+      "patch_base64_chars": 1836,
+      "patch_bytes": 1377,
+      "patch_has_cr": false,
+      "patch_sha256": "f49018031142900beff2cb1c53fabd0af5a562aa1cfe2c4519344c2fbfaa8c5e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12774",
+      "patch_base64_chars": 1264,
+      "patch_bytes": 947,
+      "patch_has_cr": false,
+      "patch_sha256": "d0b9b8daa663676ec20792e9adfd03c280b7e80f2b45d40197d805c1baea6dce",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12858",
+      "patch_base64_chars": 920,
+      "patch_bytes": 690,
+      "patch_has_cr": false,
+      "patch_sha256": "475a7b43e17ee202e4c2acd64a5cdfe0a1aa9960c31b64031e1407918868603c",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-12965",
+      "patch_base64_chars": 700,
+      "patch_bytes": 523,
+      "patch_has_cr": false,
+      "patch_sha256": "45ffde993dd30979b2bac23848a26283f73fd0aeab0a23525499a4034f46c0c0",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13012",
+      "patch_base64_chars": 680,
+      "patch_bytes": 510,
+      "patch_has_cr": false,
+      "patch_sha256": "b4d8de8ef58708861d0cedce73104e3eddca69495a0b5ae8e5c809849bebe6de",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13023",
+      "patch_base64_chars": 776,
+      "patch_bytes": 582,
+      "patch_has_cr": false,
+      "patch_sha256": "fa928203a98f8e88897bd3435095cd22a4e44a74a6fd88a98624ae0e611596fb",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13028",
+      "patch_base64_chars": 924,
+      "patch_bytes": 693,
+      "patch_has_cr": false,
+      "patch_sha256": "0e12b55011f1fc82169c317af7dea00f71a4b608f2690fc64fac5845c5291358",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13033",
+      "patch_base64_chars": 1296,
+      "patch_bytes": 970,
+      "patch_has_cr": false,
+      "patch_sha256": "aa5413fb3771640d18144cb4b95cabc16dcb0d6d81fbd323c6a4ad059eeeb5e1",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13089",
+      "patch_base64_chars": 1160,
+      "patch_bytes": 869,
+      "patch_has_cr": false,
+      "patch_sha256": "c7f622bd1f92618292a835ce84ab8039b1745d830e2a9c2a1c8a62188d0e5599",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13109",
+      "patch_base64_chars": 816,
+      "patch_bytes": 612,
+      "patch_has_cr": false,
+      "patch_sha256": "be1eade12da913d4d0d44ca84d0bacb147296442bc7f8ae95f564a7d3da8357e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13112",
+      "patch_base64_chars": 1180,
+      "patch_bytes": 884,
+      "patch_has_cr": false,
+      "patch_sha256": "ec15119cfa9f22a9c176c136a263118003a7d8abb7bd5836bbdbec2830822500",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13121",
+      "patch_base64_chars": 8752,
+      "patch_bytes": 6564,
+      "patch_has_cr": false,
+      "patch_sha256": "6c3817c1f9ac977ee2de4d35a570e9edda3fc5c5da703145875f6bb9d0ceab56",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13128",
+      "patch_base64_chars": 4472,
+      "patch_bytes": 3354,
+      "patch_has_cr": false,
+      "patch_sha256": "94a9113eaa93a0d6e30c44a0f03c650e187e79ecaa65600993f33f0d4c492538",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13158",
+      "patch_base64_chars": 1284,
+      "patch_bytes": 961,
+      "patch_has_cr": false,
+      "patch_sha256": "50f03b9d6988fb94bce8f9d7086bdd116853c448d9cfa2543e9735ebc7b12d00",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13195",
+      "patch_base64_chars": 3484,
+      "patch_bytes": 2611,
+      "patch_has_cr": false,
+      "patch_sha256": "72c9740f89e88304565d49a9aa1c37d38633215b9fd69aaca3a9f277821b02cf",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13212",
+      "patch_base64_chars": 10372,
+      "patch_bytes": 7779,
+      "patch_has_cr": false,
+      "patch_sha256": "e5289566e5f9bfe936d6339b7f2562207ba34f90d3a1f10b2f08194a0e5b5166",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13279",
+      "patch_base64_chars": 1704,
+      "patch_bytes": 1278,
+      "patch_has_cr": false,
+      "patch_sha256": "d36bf1b48d82cb603217809b7f8d223a5e3532a87635f1a6fd35f6601020ad7d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13297",
+      "patch_base64_chars": 1488,
+      "patch_bytes": 1114,
+      "patch_has_cr": false,
+      "patch_sha256": "3f22504c0339aed615bca366ebb07b5f2a0cf7534f29393b7068875d1d3ef09e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13315",
+      "patch_base64_chars": 1584,
+      "patch_bytes": 1186,
+      "patch_has_cr": false,
+      "patch_sha256": "fee7f9e8aebfa2ffaa94f38d65e3b962f1fc4d1abf5066486c809686b176c338",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13343",
+      "patch_base64_chars": 1308,
+      "patch_bytes": 980,
+      "patch_has_cr": false,
+      "patch_sha256": "dd710257441cb97dd0c9acd6bd50e8abb3bb5eb383897416b7d446a8bb4a1a36",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13344",
+      "patch_base64_chars": 6784,
+      "patch_bytes": 5088,
+      "patch_has_cr": false,
+      "patch_sha256": "cd4ce142ef39fd702719df87d61b4d6c21d40a39985baf48a469c3fa9248459a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13346",
+      "patch_base64_chars": 2452,
+      "patch_bytes": 1839,
+      "patch_has_cr": false,
+      "patch_sha256": "b0166cafb1326cd10fdedfadf1580ba7020896066cef8b7dbff30220c261a84c",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13363",
+      "patch_base64_chars": 1368,
+      "patch_bytes": 1025,
+      "patch_has_cr": false,
+      "patch_sha256": "bd40fc23605757271f7a59a2aa950fe72647448b43cfd5690071570d943f0db4",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13401",
+      "patch_base64_chars": 2708,
+      "patch_bytes": 2030,
+      "patch_has_cr": false,
+      "patch_sha256": "45dcfa367768ba23f811f8a00492ea4a5d812a4b932a46fb623ca1869383c15a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13406",
+      "patch_base64_chars": 480,
+      "patch_bytes": 359,
+      "patch_has_cr": false,
+      "patch_sha256": "8a616a0504bacd3be5dbb103ea8785ed4276f11cbe1fa441394e90cd5205f307",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13410",
+      "patch_base64_chars": 868,
+      "patch_bytes": 651,
+      "patch_has_cr": false,
+      "patch_sha256": "cb1afa47138b17aa28c6296c57ceb7e9d0cdf781dd6cb89bd3f9a02dd6776f18",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13417",
+      "patch_base64_chars": 872,
+      "patch_bytes": 654,
+      "patch_has_cr": false,
+      "patch_sha256": "c7e2add56ee45e8ff3f0f58117dc20fce01f9f773c0318f936092a80e021afe8",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13449",
+      "patch_base64_chars": 1720,
+      "patch_bytes": 1290,
+      "patch_has_cr": false,
+      "patch_sha256": "6a8e2da4b297ef526ccfd5bdb41e75b9ae20071a7a12b12117deb07965590c85",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13512",
+      "patch_base64_chars": 1676,
+      "patch_bytes": 1256,
+      "patch_has_cr": false,
+      "patch_sha256": "c8370211cbf37387fa30af6468cc52c0078a51e80fa36168001daa7b7071e600",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13513",
+      "patch_base64_chars": 4916,
+      "patch_bytes": 3686,
+      "patch_has_cr": false,
+      "patch_sha256": "86c49e25f321f44a32b87fca0b77743d92c977b1fd3f076c8c860b3cfb933f10",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13516",
+      "patch_base64_chars": 636,
+      "patch_bytes": 476,
+      "patch_has_cr": false,
+      "patch_sha256": "ef3437197cdd0f1fb047d03be50ff2a5e6c4ace221a641f4a0bc8b629831d67a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13551",
+      "patch_base64_chars": 2076,
+      "patch_bytes": 1557,
+      "patch_has_cr": false,
+      "patch_sha256": "8f5a82819897d01aeb410296dd4e602b3a8be84d8e31577167ffe9ed74c0dd45",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13568",
+      "patch_base64_chars": 896,
+      "patch_bytes": 672,
+      "patch_has_cr": false,
+      "patch_sha256": "d7d2e32da2597998ad7e0d2a104b70aa2a9232264ee4ab22be6634b3488c7c43",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13569",
+      "patch_base64_chars": 692,
+      "patch_bytes": 519,
+      "patch_has_cr": false,
+      "patch_sha256": "7d075ad41da5ec22e28d0b835d7fd7c90adce5643aa3da5c8019ec47e93740c4",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13590",
+      "patch_base64_chars": 1100,
+      "patch_bytes": 823,
+      "patch_has_cr": false,
+      "patch_sha256": "ba7ed1d4001a3c163610b60e1784459414c19490ce01c7cd30bf98681b0cc0d8",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13658",
+      "patch_base64_chars": 1140,
+      "patch_bytes": 854,
+      "patch_has_cr": false,
+      "patch_sha256": "667081efc6e0e867f91fe6549e1b73d5de3cc02a95d1659d476040c4c96d47f5",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13670",
+      "patch_base64_chars": 636,
+      "patch_bytes": 476,
+      "patch_has_cr": false,
+      "patch_sha256": "a7ef5b1163653d4a1c04cad1aafdcb9c75d9516152157c21d0e25a4866da6748",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13741",
+      "patch_base64_chars": 1612,
+      "patch_bytes": 1209,
+      "patch_has_cr": false,
+      "patch_sha256": "b38542d1f27a7223f0f5567b227feba4fa0f68475aaaa73f647adf4ea48e0cc2",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13786",
+      "patch_base64_chars": 1248,
+      "patch_bytes": 935,
+      "patch_has_cr": false,
+      "patch_sha256": "74ee6971f64ed7e3b0fb41ca9607400ff00a40021ba27b0c51b8e6e0a3f7f98e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13794",
+      "patch_base64_chars": 816,
+      "patch_bytes": 610,
+      "patch_has_cr": false,
+      "patch_sha256": "932a25fed796427942053519cf07b34b9243462dc0b33147f8fd5e6d204b10f5",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13807",
+      "patch_base64_chars": 2556,
+      "patch_bytes": 1917,
+      "patch_has_cr": false,
+      "patch_sha256": "92412882a72d5a32735686b66ab22c468eea8db9895225f2d535c72a00a57e4e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13809",
+      "patch_base64_chars": 1632,
+      "patch_bytes": 1222,
+      "patch_has_cr": false,
+      "patch_sha256": "6ffda1af3e10ea2092376fb86a88a1e7533dbae2c2a09bf9e1974f62bf0fbba8",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13810",
+      "patch_base64_chars": 1568,
+      "patch_bytes": 1176,
+      "patch_has_cr": false,
+      "patch_sha256": "429483cfe719ab7f57eb64984362f56dcce1ace95c6fa2c7beb280f918033199",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13820",
+      "patch_base64_chars": 1880,
+      "patch_bytes": 1408,
+      "patch_has_cr": false,
+      "patch_sha256": "0b1fce9290e4e0ba7cb493a33fa2ef34f2cc6d96f2faaccb8e8cf4a285558205",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13821",
+      "patch_base64_chars": 832,
+      "patch_bytes": 623,
+      "patch_has_cr": false,
+      "patch_sha256": "48c30978a5ac44b9e49d08fe05b8a582d4228362411185ab769bb3bb337f9ef7",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13837",
+      "patch_base64_chars": 1384,
+      "patch_bytes": 1037,
+      "patch_has_cr": false,
+      "patch_sha256": "43af4ecf3fe14bc72c6a01450a99dee3ddb452d494d493b0b7bc90af6975b433",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13925",
+      "patch_base64_chars": 840,
+      "patch_bytes": 630,
+      "patch_has_cr": false,
+      "patch_sha256": "f87ad9a029328a145916d6c2693043fe093be2d6fe636605b59709ce99178dab",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13933",
+      "patch_base64_chars": 916,
+      "patch_bytes": 687,
+      "patch_has_cr": false,
+      "patch_sha256": "c497087a56ac25d050b099dbd5c08a4724d100fcc4f76105dba6a076557a4a63",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-13964",
+      "patch_base64_chars": 928,
+      "patch_bytes": 696,
+      "patch_has_cr": false,
+      "patch_sha256": "426dc27f9b52f8fbf2fc821ee6e9856ecce053887c57f86ab2277c62d2be36c2",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14007",
+      "patch_base64_chars": 2708,
+      "patch_bytes": 2029,
+      "patch_has_cr": false,
+      "patch_sha256": "7946f112b80499585979fee3a54bf32d9754d19768bff3ea3b3472224436b6ac",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14011",
+      "patch_base64_chars": 2980,
+      "patch_bytes": 2233,
+      "patch_has_cr": false,
+      "patch_sha256": "0c612fbb1f40099e0a095c654002935489e5f5d09c4f11c2a2f47d2681a0bedf",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14017",
+      "patch_base64_chars": 832,
+      "patch_bytes": 624,
+      "patch_has_cr": false,
+      "patch_sha256": "15c067a3f0ff5f31fc8160b54e7e2e8c80f34d2d6b83a214d22df4338bc7b7d0",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14034",
+      "patch_base64_chars": 2104,
+      "patch_bytes": 1576,
+      "patch_has_cr": false,
+      "patch_sha256": "8d725a6aa255e0646c36d5c3ee02f7863c05ec5c19faece666207fa16d37ee89",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14053",
+      "patch_base64_chars": 2832,
+      "patch_bytes": 2122,
+      "patch_has_cr": false,
+      "patch_sha256": "19ff433af4d3ba1f86ceacd81ba0d059e4c2bc754a44cb27ef82b9b3f16a9a39",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14089",
+      "patch_base64_chars": 524,
+      "patch_bytes": 391,
+      "patch_has_cr": false,
+      "patch_sha256": "ec266dba0e3d62883b242d07c73e7cb2cf359e17fef36fb88133504742f13568",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14122",
+      "patch_base64_chars": 1504,
+      "patch_bytes": 1126,
+      "patch_has_cr": false,
+      "patch_sha256": "72dad77354825f18513f90daf025dc005d7aef00bf2407617f2b89233af0d879",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14140",
+      "patch_base64_chars": 1368,
+      "patch_bytes": 1026,
+      "patch_has_cr": false,
+      "patch_sha256": "e37f575c70fb84d1dc66b1fcaeefff49c519c9b4c46a7665726b60f95b2df12b",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14155",
+      "patch_base64_chars": 1268,
+      "patch_bytes": 949,
+      "patch_has_cr": false,
+      "patch_sha256": "61d14e3a2a18ccca02273a04b47f56e5b49f37ed037f684c2207aecce90a1816",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14170",
+      "patch_base64_chars": 4600,
+      "patch_bytes": 3448,
+      "patch_has_cr": false,
+      "patch_sha256": "df02fc2e1b8a022b44a889c026750b2808bb6e72378afec2e4dc40d61a53047a",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14238",
+      "patch_base64_chars": 836,
+      "patch_bytes": 627,
+      "patch_has_cr": false,
+      "patch_sha256": "9e43b0a1c208f95b7bd8ea7b548d2ed227dacf1ac505c574f667e3c9c5d08e08",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14311",
+      "patch_base64_chars": 1264,
+      "patch_bytes": 947,
+      "patch_has_cr": false,
+      "patch_sha256": "9cbcf4f264b5389796a28765c38ff3e182c7f044769c447b06a45495bd559720",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14315",
+      "patch_base64_chars": 1436,
+      "patch_bytes": 1077,
+      "patch_has_cr": false,
+      "patch_sha256": "ed8be697b5db400ec850270d66b4e57ca0aebc2677fba7c6094862947d828c26",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14349",
+      "patch_base64_chars": 1236,
+      "patch_bytes": 926,
+      "patch_has_cr": false,
+      "patch_sha256": "d8638c3595ab856960e5830530b9327645e20c58e553af2c4311bb17edc1fe6e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14351",
+      "patch_base64_chars": 1028,
+      "patch_bytes": 770,
+      "patch_has_cr": false,
+      "patch_sha256": "e094ac74b6c54fb4c6f5a39c319f2cf361b68c376649498b42c7ca452c6daabc",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14373",
+      "patch_base64_chars": 636,
+      "patch_bytes": 476,
+      "patch_has_cr": false,
+      "patch_sha256": "ab41fadaa3fb962bbc9f8a570ed936a290e68c9ba7fdbf0a95b0ba394da9c222",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14376",
+      "patch_base64_chars": 2460,
+      "patch_bytes": 1845,
+      "patch_has_cr": false,
+      "patch_sha256": "e2ed16289f208a60f6c662e66638dd658db39c176dbacad4f6cd9b815dc52769",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14404",
+      "patch_base64_chars": 1224,
+      "patch_bytes": 917,
+      "patch_has_cr": false,
+      "patch_sha256": "25cefd64806098033ac71fda878e83bccf0f0ae27cd7b7e417f60159f8db75d8",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14434",
+      "patch_base64_chars": 1900,
+      "patch_bytes": 1423,
+      "patch_has_cr": false,
+      "patch_sha256": "cbd2d367da438b65169359ba5de51ae828164c6a926c25a600fa09c8ecd797c0",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14493",
+      "patch_base64_chars": 708,
+      "patch_bytes": 530,
+      "patch_has_cr": false,
+      "patch_sha256": "15196a6edc5af1d24c62f2eed9d9bc1ece7c390e488e6b69ed340691efbc1abb",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14500",
+      "patch_base64_chars": 1356,
+      "patch_bytes": 1017,
+      "patch_has_cr": false,
+      "patch_sha256": "752075e596476fd35b634c15bc3bf10467127d3ffe336d94cdc861c1ba7cbd86",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14534",
+      "patch_base64_chars": 516,
+      "patch_bytes": 386,
+      "patch_has_cr": false,
+      "patch_sha256": "b4a7db211c190cd559d8c553d7f4c029aae2114397af47ac0051fe11e17ef39c",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14539",
+      "patch_base64_chars": 1000,
+      "patch_bytes": 749,
+      "patch_has_cr": false,
+      "patch_sha256": "f7f6ee8991f4ea436f1a5cafaf21b3f9af1b4a708afd17ff1b27c699488d0306",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14559",
+      "patch_base64_chars": 1800,
+      "patch_bytes": 1349,
+      "patch_has_cr": false,
+      "patch_sha256": "ed909ed2511952613c6751c590a0b7fef74fe721ee37d767c432427a86a6f8af",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14580",
+      "patch_base64_chars": 716,
+      "patch_bytes": 535,
+      "patch_has_cr": false,
+      "patch_sha256": "b86a035653ee3b5dabb56972ff8895b08b514e6de5a603e194ceeb9ed227f7c8",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14608",
+      "patch_base64_chars": 1176,
+      "patch_bytes": 881,
+      "patch_has_cr": false,
+      "patch_sha256": "cbc3f2704cd4eb268f81bb96c2c7af7ccbc72ba7929a2624dc055bc06eaccf71",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14631",
+      "patch_base64_chars": 6936,
+      "patch_bytes": 5201,
+      "patch_has_cr": false,
+      "patch_sha256": "69262a38ecda46e4919c388a92bb29beb563dab2625381708d355a98466834ec",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14672",
+      "patch_base64_chars": 684,
+      "patch_bytes": 511,
+      "patch_has_cr": false,
+      "patch_sha256": "c7e640b82d576f4c62c8dbc6a6d45100bf7d27838c9e2940e72f789732b53391",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14725",
+      "patch_base64_chars": 3376,
+      "patch_bytes": 2530,
+      "patch_has_cr": false,
+      "patch_sha256": "7c985ddf2bb66f35e5afbc7106994c75ab036880ba31d392f19d4713e1d16f5c",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14752",
+      "patch_base64_chars": 1956,
+      "patch_bytes": 1465,
+      "patch_has_cr": false,
+      "patch_sha256": "53ef09b36c3c1ed4cd4b99a2c13075a54b42fcbac0803e527af11ef6a4703dcc",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14765",
+      "patch_base64_chars": 1052,
+      "patch_bytes": 787,
+      "patch_has_cr": false,
+      "patch_sha256": "67f6a80384f255931186b6ff6c79727b0e8edae3fb7d0e4850b8fba931a910f7",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14771",
+      "patch_base64_chars": 924,
+      "patch_bytes": 693,
+      "patch_has_cr": false,
+      "patch_sha256": "1c83d9dec46fd4b66504230743f4884ddf30293f4d6a5975adee81b8fc5c167d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14787",
+      "patch_base64_chars": 916,
+      "patch_bytes": 685,
+      "patch_has_cr": false,
+      "patch_sha256": "96d2dfb5441604f64daf06f4bc5ce0877dd5ab7db83a11835d1201d067ca92a6",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14792",
+      "patch_base64_chars": 648,
+      "patch_bytes": 486,
+      "patch_has_cr": false,
+      "patch_sha256": "f8e961d2a0cd91d62e3258f66486f81621707ef2e376813d96c5e48f094eb07b",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14855",
+      "patch_base64_chars": 916,
+      "patch_bytes": 687,
+      "patch_has_cr": false,
+      "patch_sha256": "d3030b5f4fad5c863ff06db624c2394aa0a7f8e23a3bc281954555e703488016",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14915",
+      "patch_base64_chars": 556,
+      "patch_bytes": 416,
+      "patch_has_cr": false,
+      "patch_sha256": "227ed83508e423148cbe02a99e1b1f202116351965fddd4afd681ab17b6bfc2e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-14999",
+      "patch_base64_chars": 1636,
+      "patch_bytes": 1226,
+      "patch_has_cr": false,
+      "patch_sha256": "fccaeb2cb82e0371ae3dad2714cbe18a630ea4508beafb3394932a0828437cf1",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15022",
+      "patch_base64_chars": 1476,
+      "patch_bytes": 1106,
+      "patch_has_cr": false,
+      "patch_sha256": "cff576b3c6df42b65fde51da27302647389f9bae0bbf95738bab018068578e4d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15037",
+      "patch_base64_chars": 1872,
+      "patch_bytes": 1403,
+      "patch_has_cr": false,
+      "patch_sha256": "92ebb2aeb6fe4e9fac030ecec452fc48a01e8b90c71ab68e57b372b82e51cbd0",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15098",
+      "patch_base64_chars": 540,
+      "patch_bytes": 403,
+      "patch_has_cr": false,
+      "patch_sha256": "b8eeba7a9fb19395d8aa6f4a6e5ea6314cdc0b4305f8a93fb5d52b96f2bf5a6f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15103",
+      "patch_base64_chars": 2144,
+      "patch_bytes": 1606,
+      "patch_has_cr": false,
+      "patch_sha256": "ca566f4c3bccc161a9c709789a26836368611a67161009bbe62b1acf24961594",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15104",
+      "patch_base64_chars": 788,
+      "patch_bytes": 590,
+      "patch_has_cr": false,
+      "patch_sha256": "9027ea1fe3294c58a5e144b66167851e4aa1c494a2044a1eb0eee61b14fdb28c",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15127",
+      "patch_base64_chars": 976,
+      "patch_bytes": 732,
+      "patch_has_cr": false,
+      "patch_sha256": "170b3d56e7911cf50bd963ad5d5e2f6f290d8b70148dc3977e6a84fbccdcdc11",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15128",
+      "patch_base64_chars": 5064,
+      "patch_bytes": 3798,
+      "patch_has_cr": false,
+      "patch_sha256": "8c9e92991c30d98e546ad01e81e667a1110b10729b16708bf3613bb08250be61",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15161",
+      "patch_base64_chars": 2396,
+      "patch_bytes": 1795,
+      "patch_has_cr": false,
+      "patch_sha256": "6cab45685b6672a19d41a31601d56361225bad7928c5cf7c1b1079187941bef5",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15252",
+      "patch_base64_chars": 1136,
+      "patch_bytes": 850,
+      "patch_has_cr": false,
+      "patch_sha256": "2d3a111f45a543ce10f1055d8fa14679bd19902ff850a0a163281360a95f7f9e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15268",
+      "patch_base64_chars": 1640,
+      "patch_bytes": 1228,
+      "patch_has_cr": false,
+      "patch_sha256": "7af05d06f8053af95e24fd392b95872d1f2dcf3297f22547991a3619461ecb8e",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15277",
+      "patch_base64_chars": 872,
+      "patch_bytes": 653,
+      "patch_has_cr": false,
+      "patch_sha256": "e3f74ce7e7722d34086a2a87fa81a5a654a28c11e93ab8e0c2b5d8dc64df0095",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15278",
+      "patch_base64_chars": 1504,
+      "patch_bytes": 1128,
+      "patch_has_cr": false,
+      "patch_sha256": "5c9b92a2d49448398b6cb1b8a4b55761d6c5e809e499e7cb16e277746bd649be",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15280",
+      "patch_base64_chars": 1240,
+      "patch_bytes": 929,
+      "patch_has_cr": false,
+      "patch_sha256": "44eecf713666607bcfd5e9e33a786339fe7e82a26bbe6cf53e64252034648c69",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15315",
+      "patch_base64_chars": 888,
+      "patch_bytes": 665,
+      "patch_has_cr": false,
+      "patch_sha256": "dd19fbbb798dd2c982213626ce7cc38a457efc858d2df02621d80ea1e288687b",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15368",
+      "patch_base64_chars": 1620,
+      "patch_bytes": 1214,
+      "patch_has_cr": false,
+      "patch_sha256": "ae13d00936775e006d9513037d07347bbe1c8946256017b5715132a497a3ae7f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15375",
+      "patch_base64_chars": 980,
+      "patch_bytes": 733,
+      "patch_has_cr": false,
+      "patch_sha256": "b64daa76bf94a4a20d4d845bd2b91fb58b719ca0a1a81c001b09608220ed782d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15380",
+      "patch_base64_chars": 1104,
+      "patch_bytes": 827,
+      "patch_has_cr": false,
+      "patch_sha256": "d4f915993e6751298d27fdf35caa088e5be03cf9ba5dc2dd9dd59728e45f7e6b",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15382",
+      "patch_base64_chars": 1280,
+      "patch_bytes": 959,
+      "patch_has_cr": false,
+      "patch_sha256": "86ddf1a328d1fb80022b0418ffa5c5bde491634c2540d7ef60aae2b02edadd6d",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15467",
+      "patch_base64_chars": 936,
+      "patch_bytes": 702,
+      "patch_has_cr": false,
+      "patch_sha256": "d789423a66de4729ffafea66530883359e4bfd23f6885fd280305853b76f1e9f",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15499",
+      "patch_base64_chars": 1208,
+      "patch_bytes": 906,
+      "patch_has_cr": false,
+      "patch_sha256": "3bfa015d6787bb5ab617ffd5519795131b5f8f5df2294661ceb1c1e299225a47",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15503",
+      "patch_base64_chars": 4420,
+      "patch_bytes": 3313,
+      "patch_has_cr": false,
+      "patch_sha256": "ce31da0f4a72554cde0262e34cbb6e7c978ba8b0220aeda521715f11bf60f511",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15525",
+      "patch_base64_chars": 856,
+      "patch_bytes": 640,
+      "patch_has_cr": false,
+      "patch_sha256": "5682a1d4b556208fceb5d526d6b5452e01ec803bf6c58e2909abe8da5cb9bb8c",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15554",
+      "patch_base64_chars": 6524,
+      "patch_bytes": 4891,
+      "patch_has_cr": false,
+      "patch_sha256": "ceef43e95a8d882b99bc77e779fb5daae9af18c20d682c015b1f5fbbaee195fd",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15561",
+      "patch_base64_chars": 2676,
+      "patch_bytes": 2007,
+      "patch_has_cr": false,
+      "patch_sha256": "21a16cd2075ee98d03798302d693e0d49a9eac2df4bb30bd8ddc996326a26e12",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15563",
+      "patch_base64_chars": 3452,
+      "patch_bytes": 2588,
+      "patch_has_cr": false,
+      "patch_sha256": "5e8e9ba00474f521ef63e85e42edb2d51e2566ad114d6ff7c62e1d64dbadd832",
+      "plan_steps": 3
+    },
+    {
+      "instance_id": "django__django-15569",
+      "patch_base64_chars": 644,
+      "patch_bytes": 481,
+      "patch_has_cr": false,
+      "patch_sha256": "541931ea346593d3b8d0f80724b337efb409c53b3587070ae0ef2b4b72868ff6",
+      "plan_steps": 3
+    }
+  ],
+  "max_patch_base64_chars": 18512,
+  "purpose": "test only: public SWE-bench gold patches for the grading-harness oracle; never a submission",
+  "schema": "kimi-swe-oracle-manifest/1",
+  "source": "https://datasets-server.huggingface.co/rows",
+  "split": "test"
+}

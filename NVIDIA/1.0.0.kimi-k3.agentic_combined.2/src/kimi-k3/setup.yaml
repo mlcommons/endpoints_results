@@ -1,0 +1,58 @@
+version: '0.1'
+artifacts:
+- name: RECIPE
+  uri: fs://${{ variables.REPO_ROOT }}/NVIDIA/src/kimi-k3
+- name: MODEL
+  uri: fs://${{ variables.MODEL_PATH }}
+- name: DATASET
+  uri: fs://${{ variables.DATASET_PATH }}
+- name: DRAFT
+  uri: fs://${{ variables.DRAFT_PATH }}
+- name: SFLOW_TOOLS
+  uri: fs://${{ variables.REPO_ROOT }}/NVIDIA/src/sflow/tools
+workflow:
+  name: kimi-k3-trtllm
+  variables:
+    HEAD_NODE_IP:
+      value: ${{ backends.cluster.nodes[0].ip_address }}
+    NODE_NAMES:
+      value: ${{ backends.cluster.nodes | map(attribute='name') | join(',') }}
+    FRONTEND_PORT:
+      value: '8000'
+    FRONTEND_NODE_IP:
+      value: ${{ backends.cluster.nodes[variables.FRONTEND_NODE | int].ip_address
+        }}
+  tasks:
+  - name: fabric
+    operator:
+      name: host
+      ntasks: ${{ variables.TOTAL_NODES }}
+      ntasks_per_node: 1
+    resources:
+      nodes:
+        count: ${{ variables.TOTAL_NODES }}
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - if [ -n "${ENROOT_DATA_PATH:-}" ]; then mkdir -p "$ENROOT_DATA_PATH"; fi
+    - if [ -n "${ENROOT_TEMP_PATH:-}" ]; then mkdir -p "$ENROOT_TEMP_PATH"; fi
+    - python3 "${RECIPE}/scripts/node.py" probe "${SFLOW_WORKFLOW_OUTPUT_DIR}/fabric"
+  - name: preflight
+    operator: host
+    resources:
+      nodes:
+        indices:
+        - 0
+    depends_on:
+    - fabric
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - python3 "${SEGMENTED_TOOLS}/node.py" check "${SEGMENTED_PLAN}/placement.json" preflight
+    - test "$TOTAL_GPUS" -eq "$((NUM_CTX * CTX_GPUS + NUM_GEN * GEN_GPUS))"
+    - test "$TOTAL_GPUS" -eq "$((TOTAL_NODES * 4))"
+    - test "$NUM_TRAJECTORIES" -gt 0; test "$((NUM_TRAJECTORIES % 613))" -eq 0
+    - mkdir -p "${SFLOW_WORKFLOW_OUTPUT_DIR}/server-configs"
+    - cp "$PREFILL_CONFIG" "$DECODE_CONFIG" "$PREFILL_ENV" "$DECODE_ENV" "$ROUTER_ENV"
+      "${SFLOW_WORKFLOW_OUTPUT_DIR}/server-configs/"
+    - ln -s "${RESULTS_PATH}/report" "${SFLOW_WORKFLOW_OUTPUT_DIR}/report"

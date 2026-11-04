@@ -1,0 +1,244 @@
+# Measured configuration for this point (Rubin). Version pins come from dependencies.json
+# (CentML/vllm mlperf-end-multiturn-v1.0-qwen-v2 at VR_NVL72_VLLM_COMMIT). The VR-NVL72 server image
+# (VR_NVL72_SERVER_IMAGE) is built at VR_NVL72_VLLM_COMMIT; server.sh refuses any other image.
+# Engine block: the DP1 recipe plus MNBT 32768, prefix-match-unit 32, block-size 128, bf16 GDN state, FlashInfer GDN
+# prefill and prefill-schedule-interval 3 from C144; per-iteration logging off. MTP k: 5 up to C320, 4 from C384.
+# Capture sizes: the 137 sizes up to 16384 plus the KE10 list up to 32768 = MNBT (C512 also 576..1984
+# step 64); extra sizes cost little. The flags were tuned at C32 and C512 and carried to the other points, each measured as shipped.
+# Server environment: SERVER_ENV_COMMON (_shared/env/VR-NVL72.env, every VR point) followed by this point's SERVER_ENV.
+version: '0.1'
+artifacts:
+  SERVER_ENV_COMMON:
+    uri: <workdir> variables.QWEN_SHARED_DIR }}/env/VR-NVL72.env
+  SERVER_ENV:
+    uri: <workdir>
+    content: |
+      # This point's server environment; server.sh prepends SERVER_ENV_COMMON (_shared/env/VR-NVL72.env). The other
+      # features of VR_NVL72_VLLM_BRANCH stay at their defaults, except the K=64 MXFP8 tactics, which the common env
+      # turns off (VLLM_FLASHINFER_MXFP8_K64=0). GS2_ROUTE_PREBUILT is a point variable: empty JIT-builds the exact-routing module
+      # at start-up.
+      # C512 flags (tuned at C512, including the shared-expert stream threshold).
+      GS2_ROUTE_PREBUILT=${{ variables.GS2_ROUTE_PREBUILT }}
+      VLLM_GDN_MIXED_FORK=1
+      VLLM_MAMBA_COPY_COMPACT=1
+      VLLM_MTP_DRAFT_PREFILL_ROWS=1
+      VLLM_SHARED_EXPERTS_STREAM_TOKEN_THRESHOLD=512
+      # Retained from qwen-latest (low regression risk)
+      VLLM_PREFIX_SPREAD=1
+      VLLM_GDN_MTP_CUDA_WY=1
+      # Integrated feature set
+      VLLM_MXFP8_SPLITK_MIDM=1
+      VLLM_MXFP8_TUNE_BUCKETS=272-512:16
+      # FlashInfer autotune: seed the (fresh, per-run) cache with this system's pinned file
+      VLLM_FLASHINFER_AUTOTUNE_FILE=${{ variables.QWEN_SHARED_DIR }}/autotune/VR-NVL72.json
+  SERVER_CONFIG:
+    uri: <workdir>
+    content: |
+      model: ${{ variables.MODEL_PATH }}
+      dtype: bfloat16
+      quantization: mxfp8
+      quantization-config:
+        ignore:
+        - re:^(?:model\.)?visual(?:\..*)?$
+        - re:(?:.*\.)?lm_head$
+        - re:(?:.*\.)?embed_tokens$
+        - re:.*\.(?:input_layernorm|post_attention_layernorm)$
+        - re:.*\.mlp\.(?:gate|shared_expert_gate)$
+        - re:.*\.linear_attn\.(?:A_log|conv1d|dt_bias|in_proj_a|in_proj_b|in_proj_ba|norm)$
+        - re:.*\.self_attn\.(?:k_norm|q_norm)$
+        - re:(?:.*\.)?mtp\.(?:fc|norm|pre_fc_norm_embedding|pre_fc_norm_hidden)$
+      revision: ${{ variables.MODEL_REVISION }}
+      served-model-name: Qwen/Qwen3.6-35B-A3B
+      host: 0.0.0.0
+      port: ${{ variables.PORT }}
+      trust-remote-code: true
+      seed: 42
+      tensor-parallel-size: 1
+      data-parallel-size: 1
+      kv-cache-dtype: fp8
+      gpu-memory-utilization: 0.9
+      max-model-len: 262144
+      max-num-batched-tokens: ${{ variables.MAX_NUM_BATCHED_TOKENS }}
+      max-num-seqs: 256
+      async-scheduling: true
+      enable-chunked-prefill: true
+      enable-prefix-caching: true
+      prefix-match-unit: 32
+      block-size: 128
+      mamba-ssm-cache-dtype: bfloat16
+      attention-backend: flashinfer
+      moe-backend: flashinfer_trtllm
+      additional-config:
+        gdn_prefill_backend: flashinfer
+      speculative-config:
+        method: qwen3_next_mtp
+        num_speculative_tokens: 5
+      compilation-config:
+        cudagraph_mode: FULL_AND_PIECEWISE
+        cudagraph_capture_sizes:
+        - 1
+        - 2
+        - 4
+        - 8
+        - 16
+        - 24
+        - 32
+        - 40
+        - 48
+        - 56
+        - 64
+        - 72
+        - 80
+        - 88
+        - 96
+        - 104
+        - 112
+        - 120
+        - 128
+        - 136
+        - 144
+        - 152
+        - 160
+        - 168
+        - 176
+        - 184
+        - 192
+        - 200
+        - 208
+        - 216
+        - 224
+        - 232
+        - 240
+        - 248
+        - 256
+        - 272
+        - 288
+        - 304
+        - 320
+        - 336
+        - 352
+        - 368
+        - 384
+        - 400
+        - 416
+        - 432
+        - 448
+        - 464
+        - 480
+        - 496
+        - 512
+        - 528
+        - 544
+        - 560
+        - 576
+        - 592
+        - 608
+        - 624
+        - 640
+        - 656
+        - 672
+        - 688
+        - 704
+        - 720
+        - 736
+        - 752
+        - 768
+        - 784
+        - 800
+        - 816
+        - 832
+        - 848
+        - 864
+        - 880
+        - 896
+        - 912
+        - 928
+        - 944
+        - 960
+        - 976
+        - 992
+        - 1008
+        - 1024
+        - 1152
+        - 1280
+        - 1408
+        - 1536
+        - 1664
+        - 1792
+        - 1920
+        - 2048
+        - 2112
+        - 2176
+        - 2240
+        - 2304
+        - 2432
+        - 2560
+        - 2688
+        - 2816
+        - 2944
+        - 3072
+        - 3200
+        - 3328
+        - 3456
+        - 3584
+        - 3712
+        - 3840
+        - 3968
+        - 4096
+        - 4352
+        - 4608
+        - 4864
+        - 5120
+        - 5376
+        - 5632
+        - 5888
+        - 6144
+        - 6400
+        - 6656
+        - 6912
+        - 7168
+        - 7424
+        - 7680
+        - 7936
+        - 8192
+        - 8704
+        - 9216
+        - 9728
+        - 10240
+        - 10752
+        - 11264
+        - 11776
+        - 12288
+        - 12800
+        - 13312
+        - 13824
+        - 14336
+        - 14848
+        - 15360
+        - 15872
+        - 16384
+        - 17408
+        - 18432
+        - 19456
+        - 20480
+        - 21504
+        - 22528
+        - 23552
+        - 24576
+        - 25600
+        - 26624
+        - 27648
+        - 28672
+        - 29696
+        - 30720
+        - 31744
+        - ${{ variables.MAX_NUM_BATCHED_TOKENS }}
+      language-model-only: true
+      limit-mm-per-prompt:
+        image: 0
+        video: 0
+      enable-auto-tool-choice: true
+      tool-call-parser: qwen3_xml
+      reasoning-parser: qwen3
+      enable-prompt-tokens-details: true
+      disable-uvicorn-access-log: true

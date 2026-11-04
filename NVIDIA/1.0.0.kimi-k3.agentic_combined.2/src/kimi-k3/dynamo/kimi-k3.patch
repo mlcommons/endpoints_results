@@ -1,0 +1,38 @@
+--- a/dynamo-renderer-5.2.0/src/kimi_k3.rs
++++ b/dynamo-renderer-5.2.0/src/kimi_k3.rs
+@@ -78,7 +78,19 @@
+         if self.exclude_tools_when_tool_choice_none && tool_choice_kind == Some("none") {
+             tools = None;
+         }
+-        let tools = tools.map(deep_sort);
++        // Match native TRT-LLM FunctionDefinition.model_dump(): its optional
++        // strict field is present as null when omitted in the HTTP request.
++        // Preserve explicit booleans/null and do not mutate the request.
++        let tools = tools.map(|mut tools| {
++            if let Some(items) = tools.as_array_mut() {
++                for tool in items {
++                    if let Some(function) = tool.get_mut("function").and_then(Value::as_object_mut) {
++                        function.entry("strict").or_insert(Value::Null);
++                    }
++                }
++            }
++            deep_sort(tools)
++        });
+ 
+         let args = req.chat_template_args();
+         // Moonshot's K3 API defines named tool choice as incompatible with
+--- a/source/lib/runtime/src/pipeline/network/tcp/server.rs
++++ b/source/lib/runtime/src/pipeline/network/tcp/server.rs
+@@ -762,6 +762,12 @@
+ ) -> Result<()> {
+     let listener = tokio::net::TcpListener::bind(addr)
+         .await
++        .and_then(|listener| {
++            // Bursts of response connections can exceed Tokio's default backlog
++            // before the accept task is scheduled. The OS still caps this value.
++            socket2::SockRef::from(&listener).listen(4096)?;
++            Ok(listener)
++        })
+         .map_err(|e| anyhow::anyhow!("Failed to start TcpListender on {}: {}", addr, e));
+ 
+     let listener = match listener {

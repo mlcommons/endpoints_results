@@ -1,0 +1,57 @@
+name: "qwen-agentic-benchmark"
+version: "1.0"
+type: "online"
+
+model_params:
+  name: "Qwen/Qwen3.6-35B-A3B"
+  temperature: 1.0
+  top_k: 20
+  top_p: 0.95
+  repetition_penalty: 1.0
+  presence_penalty: 1.5
+  max_new_tokens: 8192
+  chat_template_kwargs:
+    preserve_thinking: true
+
+datasets:
+  - name: agentic_combined
+    type: performance
+    path: /workspace/dataset_cache/agentic_inference_conversations/mlperf_agentic_inference_dataset.jsonl
+    accuracy_config:
+      eval_method: agentic_inference_inline # required benchmark default.
+    agentic_inference:
+      turn_timeout_s: 14400.0
+      enable_salt: true
+      inject_tool_delay: true
+      stop_issuing_on_first_user_complete: false
+      num_trajectories_to_issue: 613
+  - name: swe_bench # PERF skips external evaluation; use ACC or BOTH to run it.
+    type: "accuracy"
+    accuracy_config:
+      eval_method: "swe_bench_scorer"
+      extras:
+        swebench_service_url: "http://localhost:__SWEBENCH_PORT__"
+        swebench_service_auth_token: "__SWEBENCH_SERVICE_AUTH_TOKEN__"
+        num_instances: 200
+        workers: 200
+        max_eval_workers: 20
+        swebench_template: "qwen_tools"
+
+settings:
+  runtime:
+    max_issue_duration_ms: 57600000 # Performance-phase issue cap.
+
+  load_pattern:
+    type: agentic_inference
+    target_concurrency: 100
+
+  client:
+    warmup_connections: 0
+    max_idle_time: 0.5
+
+endpoint_config:
+  endpoints:
+    - "__ENDPOINT_URL__"
+  api_type: openai
+
+enable_cpu_affinity: false

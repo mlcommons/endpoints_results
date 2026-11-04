@@ -1,0 +1,95 @@
+# Complete performance and SWE-bench client configuration for this point.
+version: '0.1'
+artifacts:
+  CLIENT_CONFIG:
+    uri: <workdir>
+    content: |
+      name: qwen-agentic-benchmark
+      version: '1.0'
+      type: online
+      submission_ref:
+        model: Qwen/Qwen3.6-35B-A3B
+        ruleset: mlperf-endpoints-v1.0-2026-10-C1-A
+      model_params:
+        name: Qwen/Qwen3.6-35B-A3B
+        tokenizer_name: ${{ variables.MODEL_PATH }}
+        temperature: 1.0
+        top_k: 20
+        top_p: 0.95
+        repetition_penalty: 1.0
+        presence_penalty: 1.5
+        max_new_tokens: 8192
+        chat_template_kwargs:
+          preserve_thinking: true
+        streaming: 'on'
+      datasets:
+      - name: agentic_coding
+        type: performance
+        path: ${{ variables.DATASET_PATH }}
+        accuracy_config:
+          eval_method: agentic_inference_inline
+        agentic_inference:
+          turn_timeout_s: 14400.0
+          enable_salt: true
+          inject_tool_delay: true
+          num_trajectories_to_issue: 2452
+          stop_issuing_on_first_user_complete: false
+      - name: swe_bench
+        type: accuracy
+        accuracy_config:
+          eval_method: swe_bench_scorer
+          num_repeats: 1
+          extras:
+            swebench_service_url: http://localhost:18080
+            num_instances: 200
+            workers: 10
+            max_eval_workers: 10
+            swebench_template: qwen_tools
+      settings:
+        metrics_isl: false
+        runtime:
+          max_issue_duration_ms: null
+        early_stopping:
+          enabled: false
+        load_pattern:
+          type: agentic_inference
+          target_concurrency: ${{ variables.CONCURRENCY }}
+        client:
+          num_workers: 64
+          log_level: INFO
+          warmup_connections: 0
+          auto_warmup_budget_fraction: 0.25
+          max_concurrent_warmup_connects: 128
+          max_connections: -1
+          transport:
+            type: zmq
+            recv_buffer_size: 16777216
+            send_buffer_size: 16777216
+            io_threads: 4
+            worker_io_threads: 1
+            high_water_mark: 0
+            linger: -1
+            immediate: 1
+          stream_all_chunks: false
+          worker_initialization_timeout: 300.0
+          worker_graceful_shutdown_wait: 0.5
+          worker_force_kill_timeout: 0.5
+          insecure: false
+          max_idle_time: 0.5
+          min_required_connections: -1
+          worker_gc_mode: relaxed
+        timeouts:
+          service_ready_timeout_s: 300
+          run_timeout_s: null
+          performance_drain_timeout_s: null
+          metrics_drain_timeout_s: null
+        metrics_tokenizer_workers: 2
+      endpoint_config:
+        endpoints:
+        - http://${{ backends.cluster.nodes[0].ip_address }}:${{ variables.PORT }}
+        api_type: openai
+        # The local server has no authentication. SWE's OpenAI adapter still
+        # requires a nonempty placeholder for a non-loopback endpoint.
+        api_key: EMPTY
+      report_dir: logs/qwen_agentic
+      enable_cpu_affinity: true

@@ -1,0 +1,16 @@
+points:
+  - concurrency: 8
+  - concurrency: 12
+  - concurrency: 16
+  - concurrency: 32
+  - concurrency: 64
+  - concurrency: 128
+  - concurrency: 256
+
+# Relative to this config file. Used only as the optional output path for
+# init_submission_metadata.sh; a full campaign creates its own per-run snapshot.
+metadata: submission_metadata.yaml
+
+# Relative to this config file. Manual disclosures are merged with observed host
+# and selected-image observations; keep this file blank until reviewed.
+disclosures: submission_disclosures.yaml

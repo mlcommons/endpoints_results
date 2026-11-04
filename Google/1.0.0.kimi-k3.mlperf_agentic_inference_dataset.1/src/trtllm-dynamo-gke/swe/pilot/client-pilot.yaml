@@ -1,0 +1,58 @@
+# Kimi-K3 SWE-bench 1-node pilot on GKE: client config (benchmark from-config --mode acc).
+#
+# Source: the drop's CLIENT_CONFIG in NVIDIA/src/kimi-k3/templates/ifb.yaml, rendered for
+# BENCHMARK_MODE=acc and point_12 (CONCURRENCY 12, NUM_TRAJECTORIES 613).
+# Pilot-only edits, each marked PILOT below. Everything else is verbatim.
+#   1. name: kimi-k3-swe-pilot (was kimi-k3-c12).
+#   2. No submission_ref. This run is not a submission and is not bound to the round's seeds.
+#      SWE-bench takes the first num_instances rows, so the seeds do not change what runs.
+#   3. model_params.name: ${PILOT_MODEL_NAME}, the served model id of the pilot endpoint
+#      (was moonshotai/Kimi-K3). Kimi-K3 needs 12+ nodes; the pilot only tests the SWE path.
+#   4. swe_bench num_instances: 10 (was 200).
+#   5. endpoints: the pilot model on this node, http://127.0.0.1:18000 (was the Kimi frontend).
+#
+# Environment (set by the kimi-swe-client pod, the same way as the drop's benchmark task):
+#   SWE_SERVICE_URL, SWE_SERVICE_TOKEN  read from the service's connection file
+#   PILOT_MODEL_NAME                    data[0].id from the pilot endpoint's /v1/models
+#   MODEL_PATH                          the pilot model directory (tokenizer)
+#   DATASET_PATH                        an empty file; acc mode does not load the perf dataset
+#   SFLOW_WORKFLOW_OUTPUT_DIR           the run directory on the node
+name: kimi-k3-swe-pilot                                   # PILOT 1
+type: online
+# PILOT 2: submission_ref removed.
+model_params:
+  name: ${PILOT_MODEL_NAME}                               # PILOT 3
+  temperature: 1
+  top_p: 1
+  max_new_tokens: 8192
+  tokenizer_name: ${MODEL_PATH}
+datasets:
+  - name: agentic_combined_performance
+    path: ${DATASET_PATH}
+    accuracy_config: {eval_method: agentic_inference_inline}
+    agentic_inference:
+      turn_timeout_s: 3600
+      enable_salt: true
+      inject_tool_delay: true
+      routing_headers: [X-Session-ID, X-Dynamo-Session-ID]
+      num_trajectories_to_issue: 613
+      stop_issuing_on_first_user_complete: false
+  - name: swe_bench
+    type: accuracy
+    accuracy_config:
+      eval_method: swe_bench_scorer
+      num_repeats: 1
+      extras:
+        subset: verified
+        num_instances: 10                                 # PILOT 4
+        workers: 16
+        max_eval_workers: 16
+        swebench_service_url: ${SWE_SERVICE_URL}
+        swebench_service_auth_token: ${SWE_SERVICE_TOKEN}
+settings:
+  load_pattern: {type: agentic_inference, target_concurrency: 12}
+  client: {num_workers: 8, warmup_connections: 0, worker_initialization_timeout: 600, max_idle_time: 0.5}
+endpoint_config:
+  endpoints: ["http://127.0.0.1:18000"]                   # PILOT 5
+  api_key: EMPTY
+report_dir: ${SFLOW_WORKFLOW_OUTPUT_DIR}/report

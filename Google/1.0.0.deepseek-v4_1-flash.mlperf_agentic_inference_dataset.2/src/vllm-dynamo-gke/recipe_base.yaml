@@ -1,0 +1,643 @@
+version: "0.1"
+
+# ============================================================================
+# DeepSeek-V4.1-Flash -- MLPerf Endpoints v1.0.3 point C__POINT__ on GKE A4X-max
+# (GB300 NVL72).  *** GENERATED FILE -- DO NOT EDIT IN PLACE ***
+# Regenerate with ../../generate_point_recipes.py from ../../recipe_base.yaml.
+# ============================================================================
+#
+# GKE port of the NVIDIA Slurm recipe (nv-mlpinf-partner-partner-endpoints-v1.0.3):
+#   NVIDIA/src/deepseek-v4.1-flash/configs/GB300-NVL72_GB300-288GB_aarch64x4_vLLM-Dynamo/
+#     point___POINT__/dsv4.1_flash_config.yaml   (this point's variables)
+#     point___POINT__/client.yaml                (client config, artifact below)
+#     point___POINT__/server-env.yaml            (worker env, artifact below)
+#     point___POINT__/dynamo_env.yaml            (common/frontend/worker Dynamo env, artifact below)
+#     point___POINT__/endpoint_env.yaml          (client env, artifact below)
+#     vllm_acc_perf_acc.yaml                     (workflow: frontend/worker/client)
+#     slurm_env.yaml                             (site/launcher -- DISCARDED)
+#   NVIDIA/src/deepseek-v4.1-flash/tools/{run_with_env,cpuset}.py (artifacts)
+#   NVIDIA/src/sflow/tools/{run_with_env,generate_endpoint_yaml}.py (artifacts)
+#
+# Ported per ../../../../SLURM_TO_GKE.md.  The split (guide section 1):
+#
+#   MODEL / WORKLOAD half -- VERBATIM from the drop, enforced by --check:
+#     VLLM_ARGS, NUM_WORKERS, TOTAL_GPUS, CONCURRENCY, DATASET_REPEATS,
+#     NUM_TRAJECTORIES, the complete `dynamo.vllm` / `dynamo.frontend` argument
+#     lists (incl. DEP4 --data-parallel-size 4 --enable-expert-parallel, MTP
+#     speculative config, --attention-backend FLASHINFER_MLA_SPARSE_DSV41),
+#     client.yaml, server-env.yaml, dynamo_env.yaml, endpoint_env.yaml,
+#     cpuset.py, both run_with_env.py scripts, and every probe.
+#
+#   FABRIC / CONTAINER / LAUNCHER half -- the GKE layer:
+#     srun + Pyxis + Enroot     -> kubernetes backend, k8s operators
+#     --segment=1 --exclusive   -> 1 reserved node, compute_domain {create: true}
+#     4 x 1-GPU DEP4 workers    -> 4 replicas with GPUS_PER_WORKER=1 merged by
+#                                  sflow (merge_colocated_gpu_pods) into 1 pod
+#                                  with all 4 GPUs; server-env.yaml exports
+#                                  CUDA_VISIBLE_DEVICES="0,1,2,3" and
+#                                  VLLM_DP_RANK_LOCAL_OVERRIDE=${SFLOW_REPLICA_INDEX}
+#     shared FS (WORK_DIR,      -> node-local SSD hostPaths (model, data, reports,
+#       SCRATCH_DIR, RECIPE_DIR)   runtime/caches), staged on EVERY node
+#     /dev/shm DYN_FILE_KV      -> shared across pods on node 0 via host_ipc: true
+#     SLURM_JOB_ID              -> RUN_TAG (deterministic cksum of sflow run id)
+#     frontend writes VLLM_URLS -> static VLLM_URLS artifact (ConfigMaps are
+#                                  read-only and per-pod)
+#     host_prepare (host_bash)  -> NOT PORTED (Slurm host page-cache drop)
+#     swebench_service (host,   -> NOT PORTED: needs Pyxis/srun or a Docker daemon;
+#       --runtime pyxis)           MODE defaults to perf (see MODE below)
+#
+# WHY NO UCX / MPI BLOCK: guide section 5.6's UCX_* and OMPI_* block exists for
+# TRT-LLM disaggregated KV transfer under MPI.  This workload is aggregated
+# vLLM (DEP4) behind a Dynamo frontend on ONE node: no MPI, no NIXL/UCX KV
+# transfer, no cross-node traffic.  Single-node socket variables
+# (NCCL_SOCKET_IFNAME=eth0, GLOO_SOCKET_IFNAME=eth0, NCCL_NET=Socket,
+# NCCL_ENV_PLUGIN=none, NCCL_NET_PLUGIN=none) prevent NCCL/Gloo from probing
+# unconfigured RoCE HCAs or loading HPC-X net plugins on GKE.
+#
+__HEADER__
+# ============================================================================
+
+variables:
+  # ---------------------------------------------------------------------
+  # POINT -- VERBATIM blocks from point___POINT__/dsv4.1_flash_config.yaml.
+  # --check asserts these bytes are identical to the drop.  Do not edit.
+  # ---------------------------------------------------------------------
+__POINT_VARS__
+  # VERBATIM from vllm_acc_perf_acc.yaml (top-level variables).
+__GPUS_PER_WORKER_VAR__
+
+  # ---------------------------------------------------------------------
+  # MODE -- the drop sets `both` on C16/C24/C128/C2048 and `perf` on
+  # C32/C64/C256/C512/C1024 (drop default for C__POINT__: __DROP_MODE__).
+  # GKE defaults to `perf`: in PERF mode the pinned client skips the
+  # swe_bench dataset entirely, so the verbatim client.yaml runs without
+  # the SWE-bench service.  acc/both additionally need SWEBENCH_SERVICE_ADDR
+  # (see below) and the staged SWE-bench Verified parquet/cache.
+  # ---------------------------------------------------------------------
+  MODE:
+    description: "perf | acc | both.  Drop default for C__POINT__: __DROP_MODE__.  GKE default: perf (no in-cluster SWE-bench runtime)."
+    value: perf
+  SWEBENCH_SERVICE_ADDR:
+    description: >-
+      host:port of an externally hosted swebench_service (endpoints
+      __SWEBENCH_COMMIT__, started with --auth-token
+      __SWEBENCH_TOKEN__).  Only used when MODE != perf.  The benchmark
+      pod forwards __SWEBENCH_LOCAL__ (the URL client.yaml hard-codes) to it, so
+      client.yaml stays byte-identical.  The service host must reach the
+      frontend at <node-0 InternalIP>:${{ variables.VLLM_PORT }}.
+    value: ""
+
+  # ---------------------------------------------------------------------
+  # GKE SITE -- replaces slurm_env.yaml.  Override with -s NAME=value.
+  # ---------------------------------------------------------------------
+  K8S_NAMESPACE:
+    description: "Namespace for every pod in the run."
+    value: default
+  GKE_NODEPOOL:
+    description: "cloud.google.com/gke-nodepool of the A4X-max pool."
+    value: <nodepool>
+  GPUS_PER_NODE:
+    description: "A4X-max / GB300: 4 GPUs per node (slurm_env.yaml GPUS_PER_NODE)."
+    type: integer
+    value: 4
+  TOTAL_NODES:
+    description: "ceil(TOTAL_GPUS / GPUS_PER_NODE).  Must equal slurm_env.yaml SLURM_NODES (1)."
+    type: integer
+    value: ${{ (variables.TOTAL_GPUS + variables.GPUS_PER_NODE - 1) // variables.GPUS_PER_NODE }}
+
+  MODEL_PATH:
+    description: >-
+      __MODEL_REPO__ @ __MODEL_REVISION__ on each node's local SSD
+      (Slurm: ${SCRATCH_DIR}/models/DeepSeek-V4.1-Flash).  Staged by ../../stage-assets.yaml.
+    value: <node-local-ssd>/model-cache/DeepSeek-V4.1-Flash
+  DATA_PATH:
+    description: >-
+      Slurm ${SCRATCH_DIR}/data/agentic_dataset.  Same layout:
+      perf/mlperf_agentic_inference_dataset.jsonl (sha256 __DATASET_SHA256__)
+      and dataset_cache/swe_bench_verified_test.parquet (acc/both only).
+    value: <node-local-ssd>/mlperf-data/agentic_dataset
+  REPORTS_ROOT:
+    description: "Durable report hostPath (created by ../../mk-report-dir.yaml)."
+    value: <node-local-ssd>/dsv41-flash-reports
+  RUNTIME_ROOT_HOST:
+    description: >-
+      Node-local replacement for the shared filesystem the Slurm workflow uses
+      for RECIPE_DIR (.cache/vllm and .cache/persist/{triton,tilelang,fi_autotune,deep_gemm,flashinfer})
+      and per-run shared files (host_cpus.txt).  Created by ../../mk-report-dir.yaml.
+    value: <node-local-ssd>/dsv41-flash-runtime
+
+  VLLM_IMAGE:
+    description: >-
+      slurm_env.yaml VLLM_CONTAINER_IMAGE (__VLLM_SW_VERSION__).  Pre-bundles
+      vLLM + Dynamo (python3 -m dynamo.frontend / dynamo.vllm) for linux/arm64.
+    value: __VLLM_IMAGE__
+  IMAGE_PULL_SECRET:
+    description: "Kubernetes Secret for pulling VLLM_IMAGE from registry.gitlab.com."
+    value: nv-gitlab-pull
+  CLIENT_IMAGE:
+    description: >-
+      slurm_env.yaml ENDPOINT_CONTAINER_IMAGE.  Multi-arch on ghcr.io (index
+      __CLIENT_INDEX_DIGEST__, has linux/arm64).
+      Mirror to Artifact Registry if the nodes cannot reach ghcr.io.
+    value: __CLIENT_IMAGE__
+  FABRIC_STRICT:
+    description: "1: a failed nvidia-smi NVLink fabric preflight aborts the worker (guide section 7.3).  0: warn only."
+    value: "1"
+
+artifacts:
+  # Frontend URL list for the client.  Slurm's dynamo_frontend writes this file
+  # at run time onto the shared FS; on Kubernetes a <workdir> artifact is a
+  # read-only ConfigMap, so the (identical) value is computed up front.
+  - name: VLLM_URLS
+    uri: <workdir>
+    content: |
+      ${{ backends.k8s_cluster.nodes[0].ip_address }}:${{ variables.VLLM_PORT }}
+
+  # ---- VERBATIM from the drop (--check asserts byte identity) -------------
+  - name: SERVER_ENV_YAML
+    uri: <workdir>
+    content: |
+__SERVER_ENV_YAML__
+  - name: DYNAMO_ENV_YAML
+    uri: <workdir>
+    content: |
+__DYNAMO_ENV_YAML__
+  - name: ENDPOINT_ENV_YAML
+    uri: <workdir>
+    content: |
+__ENDPOINT_ENV_YAML__
+  - name: DSV41_RUN_WITH_ENV
+    uri: <workdir>
+    content: |
+__DSV41_RUN_WITH_ENV_PY__
+  - name: CPUSET_PY
+    uri: <workdir>
+    content: |
+__CPUSET_PY__
+  - name: RUN_WITH_ENV
+    uri: <workdir>
+    content: |
+__RUN_WITH_ENV_PY__
+  - name: GENERATE_ENDPOINT_YAML
+    uri: <workdir>
+    content: |
+__GENERATE_ENDPOINT_YAML_PY__
+
+  # ---- client.yaml: VERBATIM except the documented rewrite(s) -------------
+__CLIENT_REWRITE_NOTE__
+  - name: CLIENT_CONFIG
+    uri: <workdir>
+    content: |
+__CLIENT_CONFIG_YAML__
+
+  # ---- NVLink fabric preflight (guide section 7.3; port of the Kimi-K3 check) --
+  - name: FABRIC_CHECK
+    uri: <workdir>
+    content: |
+      #!/usr/bin/env python3
+      """Fail fast if this node's four GPUs do not report a healthy NVLink fabric.
+
+      kubelet shows a node Ready with 4 allocatable GPUs even when its NVLink
+      fabric is broken; nothing else flags it before NCCL fails.  Prints one
+      DSV41_FABRIC line per worker so the run can be audited from the logs.
+      """
+      import os
+      import re
+      import shutil
+      import socket
+      import subprocess
+      import sys
+
+      def nvidia_smi():
+          for cand in (shutil.which("nvidia-smi"), "/usr/local/nvidia/bin/nvidia-smi",
+                       "<workdir>/bin/nvidia/bin/nvidia-smi", "/usr/bin/nvidia-smi"):
+              if cand and os.access(cand, os.X_OK):
+                  return cand
+          raise FileNotFoundError("nvidia-smi not found")
+
+      def fabric_identity(text):
+          blocks = re.split(r"(?m)^GPU ", text)[1:]
+          if len(blocks) != 4:
+              raise ValueError("expected 4 GPUs per node, saw %d" % len(blocks))
+          ids = []
+          for block in blocks:
+              if "\n    Fabric\n" not in block:
+                  raise ValueError("missing GPU fabric report")
+              fabric = block.split("\n    Fabric\n", 1)[1]
+              for key, want in (("State", "Completed"), ("Status", "Success"),
+                                ("Summary", "Healthy"), ("Bandwidth", "Full")):
+                  m = re.search(r"(?m)^\s+" + key + r"\s+:\s*(\S+)", fabric)
+                  if not m or m.group(1) != want:
+                      raise ValueError("unhealthy or incomplete GPU fabric: %s" % key)
+              ident = []
+              for key in ("ClusterUUID", "CliqueId"):
+                  m = re.search(key + r"\s+:\s*(\S+)", fabric)
+                  if not m or m.group(1) == "N/A":
+                      raise ValueError("missing fabric identity: %s" % key)
+                  ident.append(m.group(1))
+              ids.append(ident)
+          if any(i != ids[0] for i in ids):
+              raise ValueError("node GPUs report different fabric identities")
+          return ids[0]
+
+      def main():
+          node = os.environ.get("SFLOW_TASK_NODE_NAME") or socket.gethostname().split(".")[0]
+          replica = os.environ.get("SFLOW_REPLICA_INDEX", "0")
+          strict = os.environ.get("FABRIC_STRICT", "1") == "1"
+          try:
+              out = subprocess.check_output([nvidia_smi(), "-q"], text=True, timeout=120)
+              cluster, clique = fabric_identity(out)
+          except Exception as exc:  # noqa: BLE001
+              print("DSV41_FABRIC node=%s worker=%s FAILED: %s" % (node, replica, exc), flush=True)
+              if strict:
+                  print("DSV41_FABRIC ABORTING (FABRIC_STRICT=1): kubectl cordon %s and re-run; "
+                        "-s FABRIC_STRICT=0 to continue anyway." % node, flush=True)
+                  sys.exit(1)
+              print("DSV41_FABRIC warning only (FABRIC_STRICT=0); continuing", flush=True)
+              return
+          print("DSV41_FABRIC node=%s worker=%s cluster=%s clique=%s gpus=4 healthy=True"
+                % (node, replica, cluster, clique), flush=True)
+
+      if __name__ == "__main__":
+          main()
+
+  # ---- HOST MOUNTS.  fs:// is a hostPath mount, NOT a fetch. ---------------
+  - name: MODEL_CACHE
+    uri: fs://${{ variables.MODEL_PATH }}
+  - name: MLPERF_DATA
+    uri: fs://${{ variables.DATA_PATH }}
+  - name: NVIDIA_DRIVER_LIB
+    uri: <workdir>/bin/nvidia/lib64
+  # Never DirectoryOrCreate (guide F26): a FailedMount here is the expected
+  # transient until the ComputeDomain is active.
+  - name: IMEX_CHANNELS
+    uri: fs:///dev/nvidia-caps-imex-channels
+  - name: REPORTS_DIR
+    uri: fs://${{ variables.REPORTS_ROOT }}
+  - name: RUNTIME_DIR
+    uri: fs://${{ variables.RUNTIME_ROOT_HOST }}
+
+operators:
+  # Slurm `vllm_container` (srun + Pyxis, VLLM_CONTAINER_IMAGE) -> k8s.  Used by
+  # both dynamo_frontend (CPU pod) and vllm_worker (GPU pod), as in the drop.
+  # privileged: true allows numactl --membind / taskset and exposes host GPU topo.
+  - name: vllm_container
+    type: k8s
+    image: ${{ variables.VLLM_IMAGE }}
+    image_pull_secrets:
+      - ${{ variables.IMAGE_PULL_SECRET }}
+    shm_size: 64Gi
+    run_as_root: true
+    security_context:
+      privileged: true
+  # Slurm `endpoint_container` (ENDPOINT_CONTAINER_IMAGE) -> k8s.
+  - name: endpoint_container
+    type: k8s
+    image: ${{ variables.CLIENT_IMAGE }}
+    shm_size: 16Gi
+    run_as_root: true
+
+backends:
+  - name: k8s_cluster
+    type: kubernetes
+    default: true
+    namespace: ${{ variables.K8S_NAMESPACE }}
+    # 1 node = slurm_env.yaml SLURM_NODES.  NVIDIA's native topology; not scaled.
+    nodes: ${{ variables.TOTAL_NODES }}
+    gpus_per_node: ${{ variables.GPUS_PER_NODE }}
+    host_network: true            # pod IP == node IP; frontend URL = node IP
+    host_ipc: true                # mounts hostPath /dev/shm so DYN_FILE_KV is shared across pods
+    scheduling: device_plugin     # NOT dra on this cluster (guide F20)
+    node_selector:
+      cloud.google.com/gke-nodepool: ${{ variables.GKE_NODEPOOL }}
+    # No NCCL NET traffic exists on one node; `disable` stops NCCL probing the
+    # dead RoCE HCAs / loading the HPC-X plugin (guide F3).
+    rdma: disable
+    # ComputeDomain on a 1-node run.  Not needed for cross-node MNNVL (there is
+    # none), but it gives the pod an IMEX channel, which is what the Slurm
+    # GB300 NVL72 nodes provide to the job: vLLM/FlashInfer/NCCL can use CUDA
+    # fabric (cuMem FABRIC) handles even intra-node, and without a channel
+    # those fail with CUDA_ERROR_NOT_PERMITTED (guide F22) rather than falling
+    # back.  It also lets the IMEX_CHANNELS mount above resolve.  NO `channel:`.
+    compute_domain:
+      create: true
+    tolerations:
+      - {key: "kubernetes.io/arch", operator: "Equal", value: "arm64", effect: "NoSchedule"}
+      - {key: "nvidia.com/gpu", operator: "Exists", effect: "NoSchedule"}
+    reservation:
+      timeout: 1800
+    collect_max_file_size: 1Gi    # default 10 MiB silently skips report files (F30)
+    collect_grace_seconds: 900
+
+workflow:
+  name: dsv41_flash_vllm_endpoint_gke
+  variables:
+    HEAD_NODE_IP:
+      value: "${{ backends.k8s_cluster.nodes[0].ip_address }}"
+    FRONTEND_URL:
+      value: "http://${{ backends.k8s_cluster.nodes[0].ip_address }}:${{ variables.VLLM_PORT }}"
+  tasks:
+    # -----------------------------------------------------------------------
+    # Dynamo frontend (CPU, node 0).  The drop's script with anchored GKE
+    # substitutions only (artifact paths, VLLM_URLS, RUN_ROOT/host_cpus.txt).
+    # -----------------------------------------------------------------------
+    - name: dynamo_frontend
+      resources:
+        nodes:
+          indices: [0]
+      operator:
+        name: vllm_container
+      script:
+        - |
+          # ---- GKE preamble (not in the drop) ----
+          set -euo pipefail
+          if [ -x /opt/venv/bin/python3 ] && /opt/venv/bin/python3 -c 'import dynamo' 2>/dev/null; then
+            export PATH="/opt/venv/bin:${PATH}"
+          fi
+          export PATH="/usr/local/nvidia/bin:<workdir>/bin/nvidia/bin:${PATH}"
+          export LD_LIBRARY_PATH="/usr/local/nvidia/lib64:<workdir>/bin/nvidia/lib64:${LD_LIBRARY_PATH:-}"
+          RUN_ID="$(basename "${SFLOW_WORKFLOW_OUTPUT_DIR}")"
+          RUN_TAG="$(( $(printf '%s' "${RUN_ID}" | cksum | cut -d' ' -f1) % 1000000 ))"
+          RUN_ROOT="${{ artifacts.RUNTIME_DIR.path }}/${RUN_ID}"
+          mkdir -p "${RUN_ROOT}"
+          export SLURM_JOB_ID="${RUN_TAG}"
+          rm -rf "/dev/shm/dynamo-discovery-${SLURM_JOB_ID}"
+          echo "DSV41_RUNTIME_DIR node=${SFLOW_TASK_NODE_NAME:-$(hostname)} path=${RUN_ROOT} run_tag=${RUN_TAG}"
+          # cpuset.py parses `nvidia-smi topo -m` for GPU0..GPU3 CPU/NUMA affinity.
+          # If this CPU-only pod cannot query NVML directly, provide a sysfs PCIe
+          # fallback so cpuset.py stays byte-identical.
+          if ! nvidia-smi topo -m 2>/dev/null | grep -q '^GPU0[[:space:]]'; then
+            mkdir -p /tmp/gke-bin
+            cat <<'EOF_SMI' > /tmp/gke-bin/nvidia-smi
+          #!/usr/bin/env python3
+          import glob, os
+          gpus = []
+          for p in sorted(glob.glob("/sys/bus/pci/devices/*")):
+              try:
+                  if open(os.path.join(p, "vendor")).read().strip() == "0x10de":
+                      cls = open(os.path.join(p, "class")).read().strip()
+                      if cls.startswith("0x0302") or cls.startswith("0x0300"):
+                          numa = max(0, int(open(os.path.join(p, "numa_node")).read().strip()))
+                          cpus = open(f"/sys/devices/system/node/node{numa}/cpulist").read().strip()
+                          gpus.append((cpus, numa))
+              except Exception:
+                  pass
+          if len(gpus) < 4:
+              n0 = open("/sys/devices/system/node/node0/cpulist").read().strip() if os.path.exists("/sys/devices/system/node/node0/cpulist") else "0-71"
+              n1_ok = os.path.exists("/sys/devices/system/node/node1/cpulist")
+              n1 = open("/sys/devices/system/node/node1/cpulist").read().strip() if n1_ok else n0
+              gpus = [(n0, 0), (n0, 0), (n1, 1 if n1_ok else 0), (n1, 1 if n1_ok else 0)]
+          print("\tGPU0\tGPU1\tGPU2\tGPU3\tCPU Affinity\tNUMA Affinity\tGPU NUMA ID")
+          for i, (cpus, numa) in enumerate(gpus[:4]):
+              row = ["NV18" if j != i else " X " for j in range(4)]
+              print(f"GPU{i}\t" + "\t".join(row) + f"\t{cpus}\t{numa}\tN/A")
+          EOF_SMI
+            chmod +x /tmp/gke-bin/nvidia-smi
+            export PATH="/tmp/gke-bin:${PATH}"
+          fi
+        - |
+__FRONTEND_SCRIPT__
+      probes:
+        readiness:
+          http_get:
+            url: "${{ variables.FRONTEND_URL }}/health"
+          timeout: 5400
+          interval: 5
+        failure:
+          log_watch:
+            regex_pattern: "re:(panicked at|Rejected incompatible workers)"
+          interval: 1
+          failure_threshold: 1
+
+    # -----------------------------------------------------------------------
+    # dynamo.vllm workers: NUM_WORKERS (4) x GPUS_PER_WORKER (1) on node 0.
+    # sflow merges all 4 colocated replicas into a single 4-GPU pod
+    # (merge_colocated_gpu_pods); server-env.yaml exports
+    # CUDA_VISIBLE_DEVICES="0,1,2,3" and VLLM_DP_RANK_LOCAL_OVERRIDE=$IDX
+    # so all 4 GPUs participate in DEP4 (TP1 + DP4 + EP).
+    # -----------------------------------------------------------------------
+    - name: vllm_worker
+      depends_on:
+        - dynamo_frontend
+      replicas:
+        count: ${{ variables.NUM_WORKERS }}
+        policy: parallel
+      resources:
+        nodes:
+          indices: [0]
+        gpus:
+          count: ${{ variables.GPUS_PER_WORKER }}
+      operator:
+        name: vllm_container
+      script:
+        - |
+          # ---- GKE preamble (not in the drop) ----
+          set -euo pipefail
+          if [ -x /opt/venv/bin/python3 ] && /opt/venv/bin/python3 -c 'import dynamo' 2>/dev/null; then
+            export PATH="/opt/venv/bin:${PATH}"
+          fi
+          export PATH="/usr/local/nvidia/bin:<workdir>/bin/nvidia/bin:${PATH}"
+          export LD_LIBRARY_PATH="/usr/local/nvidia/lib64:<workdir>/bin/nvidia/lib64:${LD_LIBRARY_PATH:-}"
+          RUN_ID="$(basename "${SFLOW_WORKFLOW_OUTPUT_DIR}")"
+          # SLURM_JOB_ID stand-in: deterministic numeric tag shared with dynamo_frontend
+          # for /dev/shm/dynamo-discovery-${SLURM_JOB_ID} and short enough to keep
+          # /tmp/dsv41-<id>-w<i>/rpc well under the 107-byte unix sockaddr limit.
+          RUN_TAG="$(( $(printf '%s' "${RUN_ID}" | cksum | cut -d' ' -f1) % 1000000 ))"
+          RUN_ROOT="${{ artifacts.RUNTIME_DIR.path }}/${RUN_ID}"
+          mkdir -p "${RUN_ROOT}"
+          export SLURM_JOB_ID="${RUN_TAG}"
+          # server-env.yaml expands ${RECIPE_DIR}/.cache/... for persistent and per-job caches.
+          export RECIPE_DIR="${{ artifacts.RUNTIME_DIR.path }}"
+          mkdir -p "${RECIPE_DIR}/.cache/persist" "${RECIPE_DIR}/.cache/vllm"
+          echo "DSV41_RUNTIME_DIR node=${SFLOW_TASK_NODE_NAME:-$(hostname)} path=${RUN_ROOT} run_tag=${RUN_TAG} worker=${SFLOW_REPLICA_INDEX:-0}"
+          if [ ! -f "${{ variables.MODEL_PATH }}/config.json" ] || ! ls "${{ variables.MODEL_PATH }}"/*.safetensors >/dev/null 2>&1; then
+            echo "FATAL: model not staged at ${{ variables.MODEL_PATH }} -- kubectl apply -f ../../stage-assets.yaml" >&2
+            exit 1
+          fi
+          # ---- NVLink fabric preflight (guide 7.3) ----
+          FABRIC_STRICT="${{ variables.FABRIC_STRICT }}" python3 ${{ artifacts.FABRIC_CHECK.path }}
+          # ---- GKE compatibility layer (single node, no MPI/UCX/RoCE) ----
+          export NCCL_SOCKET_IFNAME=eth0
+          export GLOO_SOCKET_IFNAME=eth0
+          export TP_SOCKET_IFNAME=eth0
+          export NCCL_NET=Socket
+          export NCCL_ENV_PLUGIN=none
+          export NCCL_NET_PLUGIN=none
+          export NCCL_DEBUG=INFO
+        - |
+__WORKER_SCRIPT__
+      probes:
+        readiness:
+          log_watch:
+            regex_pattern: "endpoint 'dynamo.backend.generate'"
+            match_count: 1
+          timeout: 5400
+          interval: 10
+        failure:
+          log_watch:
+            regex_pattern: "re:(CUDA out of memory|Engine core initialization failed|Failed to bind to address|System status server startup failed)"
+          interval: 1
+          failure_threshold: 1
+
+    # -----------------------------------------------------------------------
+    # MLCommons Endpoints client (CPU, node 0).  GKE items per guide 5.8, then
+    # the drop's endpoint_client script item with anchored substitutions only.
+    # -----------------------------------------------------------------------
+    - name: endpoint_client
+      resources:
+        nodes:
+          indices: [0]
+      operator:
+        name: endpoint_container
+      depends_on:
+        - dynamo_frontend
+        - vllm_worker
+      script:
+        - |
+          set -euo pipefail
+        # (1) Resolve the client venv BEFORE scrubbing env: containers start with
+        #     `bash -l`, which resets PATH and drops /opt/venv/bin (guide F16).
+        - |
+          CLIENT_VENV="${UV_PROJECT_ENVIRONMENT:-/opt/venv}"
+          if [ -x "${CLIENT_VENV}/bin/python3" ]; then
+            export PATH="${CLIENT_VENV}/bin:${PATH}"
+          fi
+          unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+          echo "client interpreter: $(command -v python3)"
+          if ! python3 -c 'import inference_endpoint' 2>/dev/null; then
+            echo "FATAL: 'inference_endpoint' not importable with $(command -v python3) (CLIENT_IMAGE=${{ variables.CLIENT_IMAGE }})" >&2
+            exit 1
+          fi
+        - |
+          RUN_ID="$(basename "${SFLOW_WORKFLOW_OUTPUT_DIR}")"
+          RUN_ROOT="${{ artifacts.RUNTIME_DIR.path }}/${RUN_ID}"
+          export MODEL_PATH="${{ variables.MODEL_PATH }}"
+          export DATA_PATH="${{ artifacts.MLPERF_DATA.path }}"
+          export CONCURRENCY="${{ variables.CONCURRENCY }}"
+          export NUM_TRAJECTORIES="${{ variables.NUM_TRAJECTORIES }}"
+          export MODE="${{ variables.MODE }}"
+          case "${MODE}" in
+            perf) ;;
+            acc|both)
+              if [ -z "${{ variables.SWEBENCH_SERVICE_ADDR }}" ]; then
+                echo "FATAL: MODE=${MODE} needs the SWE-bench service, which the drop runs on the" >&2
+                echo "  Slurm node with --runtime pyxis (srun + Enroot).  GKE has neither Pyxis nor a" >&2
+                echo "  Docker daemon in pods.  Host one elsewhere and pass" >&2
+                echo "  -s SWEBENCH_SERVICE_ADDR=<host:port>  (see ../../README.md)." >&2
+                exit 2
+              fi ;;
+            *) echo "FATAL: MODE must be perf, acc or both (got '${MODE}')" >&2; exit 2 ;;
+          esac
+        # (2) Hard-fail on missing assets: a missing fs:// path is only a plan-time
+        #     warning (guide F5).
+        - |
+          fail=0
+          [ -f "${MODEL_PATH}/config.json" ] || { echo "MISSING model: ${MODEL_PATH}/config.json" >&2; fail=1; }
+          [ -f "${MODEL_PATH}/tokenizer.json" ] || { echo "MISSING tokenizer: ${MODEL_PATH}/tokenizer.json (client.yaml tokenizer_name: \${MODEL_PATH})" >&2; fail=1; }
+          PERF_JSONL="${DATA_PATH}/perf/mlperf_agentic_inference_dataset.jsonl"
+          if [ -f "${PERF_JSONL}" ]; then
+            GOT="$(sha256sum "${PERF_JSONL}" | cut -d' ' -f1)"
+            if [ "${GOT}" = "__DATASET_SHA256__" ]; then
+              echo "Using official dataset at: ${PERF_JSONL} (sha256 ${GOT})"
+            else
+              echo "CORRUPT perf dataset: sha256 ${GOT} != __DATASET_SHA256__" >&2; fail=1
+            fi
+          else
+            echo "MISSING perf dataset: ${PERF_JSONL}" >&2; fail=1
+          fi
+          if [ "${MODE}" != perf ] && [ ! -f "${DATA_PATH}/dataset_cache/swe_bench_verified_test.parquet" ]; then
+            echo "MISSING SWE-bench Verified parquet: ${DATA_PATH}/dataset_cache/swe_bench_verified_test.parquet (required for MODE=${MODE})" >&2; fail=1
+          fi
+          if [ "${fail}" != 0 ]; then
+            echo "Stage the assets on every node (kubectl apply -f ../../stage-assets.yaml). Refusing to run." >&2
+            exit 1
+          fi
+        # (3) Slurm bind mount ${DATA_PATH}/dataset_cache -> <node-mount>/inference-endpoint/dataset_cache:ro,
+        #     reproduced with a symlink (sflow can only hostPath-mount fs:// at its own path).
+        - |
+          if [ -d "${DATA_PATH}/dataset_cache" ]; then
+            mkdir -p <node-mount>/inference-endpoint
+            [ -e <node-mount>/inference-endpoint/dataset_cache ] || ln -s "${DATA_PATH}/dataset_cache" <node-mount>/inference-endpoint/dataset_cache
+            ls -ld <node-mount>/inference-endpoint/dataset_cache
+          fi
+        # (4) Durable REPORT_DIR on the node's SSD, printed early (guide F31).
+        - |
+          export REPORT_DIR="${{ artifacts.REPORTS_DIR.path }}/$(basename "${SFLOW_WORKFLOW_OUTPUT_DIR}")"
+          mkdir -p "${REPORT_DIR}"
+          echo "DSV41_REPORT_DIR node=${SFLOW_TASK_NODE_NAME:-$(hostname)} path=${REPORT_DIR}"
+        # GKE: wait until the frontend lists the served model (worker readiness
+        # proves registration; this proves the frontend's file-discovery saw it).
+        - |
+          FE="http://$(grep -v '^[[:space:]]*$' ${{ artifacts.VLLM_URLS.path }} | head -1)"
+          python3 - "${FE}" "__SERVED_MODEL__" <<'EOF_WAIT'
+          import json, sys, time, urllib.request
+          fe, model = sys.argv[1], sys.argv[2]
+          deadline = time.monotonic() + 900
+          last = ""
+          while time.monotonic() < deadline:
+              try:
+                  with urllib.request.urlopen(fe + "/v1/models", timeout=10) as r:
+                      ids = [m.get("id") for m in json.load(r).get("data", [])]
+                  if model in ids:
+                      print("DSV41_FRONTEND_READY %s serves %s" % (fe, model), flush=True)
+                      sys.exit(0)
+                  last = repr(ids)
+              except Exception as exc:  # noqa: BLE001
+                  last = repr(exc)
+              time.sleep(5)
+          sys.exit("FATAL: %s never listed %s; last: %s" % (fe, model, last))
+          EOF_WAIT
+        # SWE-bench forwarder (acc/both only): client.yaml hard-codes
+        # __SWEBENCH_LOCAL__; forward it to SWEBENCH_SERVICE_ADDR so client.yaml stays verbatim.
+        - |
+          if [ "${MODE}" != perf ]; then
+            python3 - "${{ variables.SWEBENCH_SERVICE_ADDR }}" "__SWEBENCH_LOCAL_PORT__" <<'EOF_FWD' &
+          import asyncio, sys
+          host, port = sys.argv[1].rsplit(":", 1)
+          local_port = int(sys.argv[2])
+          async def pipe(reader, writer):
+              try:
+                  while True:
+                      data = await reader.read(65536)
+                      if not data:
+                          break
+                      writer.write(data)
+                      await writer.drain()
+              finally:
+                  writer.close()
+          async def handle(cr, cw):
+              ur, uw = await asyncio.open_connection(host, int(port))
+              await asyncio.gather(pipe(cr, uw), pipe(ur, cw))
+          async def main():
+              server = await asyncio.start_server(handle, "127.0.0.1", local_port)
+              async with server:
+                  await server.serve_forever()
+          asyncio.run(main())
+          EOF_FWD
+            for i in $(seq 1 60); do
+              if python3 -c 'import sys, urllib.request; urllib.request.urlopen(sys.argv[1], timeout=5)' "__SWEBENCH_LOCAL__/health" 2>/dev/null; then
+                echo "SWE-bench service reachable via __SWEBENCH_LOCAL__ -> ${{ variables.SWEBENCH_SERVICE_ADDR }}"; break
+              fi
+              [ "${i}" = 60 ] && { echo "FATAL: SWE-bench service not healthy at ${{ variables.SWEBENCH_SERVICE_ADDR }}" >&2; exit 1; }
+              sleep 5
+            done
+          fi
+        # (5) The drop's endpoint_client script item (anchored substitutions only, WITHOUT exec):
+        - |
+__CLIENT_SCRIPT__
+        # (6) Mirror the small report files back for sflow's collect; never mask
+        #     the benchmark exit code.
+        - |
+          DEST="${SFLOW_WORKFLOW_OUTPUT_DIR}/report"
+          mkdir -p "${DEST}"
+          ( cd "${REPORT_DIR}" \
+            && find . -type f ! -name 'events.jsonl' -print0 \
+               | tar cf - --null -T - ) 2>/dev/null \
+            | ( cd "${DEST}" && tar xf - ) 2>/dev/null || true
+          echo "mirrored report -> ${DEST}:"
+          ls -la "${DEST}" || true
+          echo "durable copy retained on node at ${REPORT_DIR}"
+      probes:
+        failure:
+          log_watch:
+            regex_pattern: "re:(?i)(token metric recorder failed|tokenizer drain (?:timed out|failed)|swebench service exited)"

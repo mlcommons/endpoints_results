@@ -1,0 +1,4 @@
+vllm==0.20.2rc1.dev6066+gcbc89c23e.d20261001.cu134
+torch==2.15.0.dev20260908+cu134
+transformers==5.18.0
+protobuf==6.33.6

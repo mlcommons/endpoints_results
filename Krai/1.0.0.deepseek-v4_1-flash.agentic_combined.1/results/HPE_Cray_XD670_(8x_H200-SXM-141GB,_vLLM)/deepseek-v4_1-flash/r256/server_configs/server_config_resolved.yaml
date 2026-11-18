@@ -1,0 +1,43 @@
+name: dsv41f-long-endpoints-nvidia-eval
+launch:
+  model: deepseek-ai/DeepSeek-V4.1-Flash
+  model_label: dsv41f
+  bench_size: long
+  scenario: endpoints
+  target_concurrency: 256
+  bench_mode: perf
+  patch_num: null
+  profile: false
+  no_flag: false
+vllm_config:
+  env:
+    VLLM_ENGINE_READY_TIMEOUT_S: 2700
+    VLLM_USE_RUST_FRONTEND: 1
+  fixed_params:
+    revision: dba1be0a40aa45a94ad051997016db3960a90277
+    tokenizer-mode: deepseek_v41
+    tool-call-parser: deepseek_v41
+    reasoning-parser: deepseek_v41
+    enable-auto-tool-choice: true
+    language-model-only: true
+    engram-config:
+      cpu_offload: true
+      dp_shared_memory: true
+    tensor-parallel-size: 2
+    enable-prefix-caching: true
+    async-scheduling: true
+    enable-expert-parallel: true
+    compilation-config:
+      cudagraph_mode: FULL_AND_PIECEWISE
+    max-num-seqs: 1024
+    max-num-batched-tokens: 8192
+    gpu-memory-utilization: 0.9
+    data-parallel-size: 4
+    speculative-config:
+      method: dspark
+      revision: dba1be0a40aa45a94ad051997016db3960a90277
+      num_speculative_tokens: 5
+      draft_sample_method: probabilistic
+      rejection_sample_method: block
+      enable_adaptive_verification: false
+      disable_eagle_block_drop: true

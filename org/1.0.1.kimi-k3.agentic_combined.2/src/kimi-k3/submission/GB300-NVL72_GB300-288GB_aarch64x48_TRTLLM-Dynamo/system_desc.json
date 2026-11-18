@@ -1,0 +1,64 @@
+{
+  "system_desc_id": "GB300-NVL72_GB300-288GB_aarch64x48_TRTLLM-Dynamo",
+  "division": "Standardized",
+  "system_name": "NVIDIA GB300 NVL72 (TRT-LLM + Dynamo)",
+  "shortened_system_name": "GB300-NVL72",
+  "system_availability_status": "Available",
+  "availability_url": "https://www.nvidia.com/en-us/data-center/gb300-nvl72/",
+  "system_size": "48 accelerators",
+  "system_node_ensemble_count": 1,
+  "system_node_ensemble_total": 12,
+  "endpoint_url": "<your endpoint URL>",
+  "serving_framework": "TensorRT-LLM 1.3.0rc25.post1 + Dynamo 1.6.0.dev20260918",
+  "model_name": "kimi-k3",
+  "benchmark_model": "kimi-k3",
+  "max_supported_concurrency": "<highest point of your line>",
+  "node_types": [
+    {
+      "system_node_ensemble_id": 0,
+      "number_of_nodes": 12,
+      "host_processor_model_name": "NVIDIA Grace (ARM Neoverse-V2)",
+      "host_processors_per_node": 2,
+      "host_processor_core_count": 72,
+      "host_memory_capacity": "unspecified",
+      "host_memory_configuration": "unspecified",
+      "accelerator_info": [
+        {
+          "accelerator_model_name": "NVIDIA GB300",
+          "accelerators_per_node": 4,
+          "accelerator_memory_capacity": "288 GB",
+          "accelerator_memory_type": "HBM3e",
+          "accelerator_interconnect": "NVLink 5 + NVSwitch (NVL72)",
+          "accelerator_host_interconnect": "NVLink-C2C (Grace-Blackwell)"
+        }
+      ],
+      "host_network_card_count": "unspecified",
+      "host_networking": "NVLink + InfiniBand",
+      "host_storage_capacity": "unspecified",
+      "host_storage_type": "unspecified",
+      "other_hardware": "",
+      "cooling": "Liquid-cooled",
+      "hw_notes": "",
+      "inference_backend": "TensorRT-LLM 1.3.0rc25.post1",
+      "driver": "NVIDIA 580",
+      "operating_system": "Ubuntu Linux",
+      "filesystem": "unspecified",
+      "container_link": "registry.gitlab.com/nvidia/mlperf-inference-partner/nv-mlpinf-partner/kimi-k3-dynamo@sha256:985260a01a2dfb66bdd0c68f0bd482e78f69c1b101120c7341782d101e2602a4",
+      "other_software_stack": "unspecified",
+      "sw_notes": "",
+      "host_processor_vcpu_count": 144
+    }
+  ],
+  "node_config": "12 nodes, 4 GPUs per node. Each point engages 8 or 12 of them; its point.yaml declares which in nodes_used.",
+  "disaggregated": true,
+  "batch": 0,
+  "config_summary": "<the point's prefill and decode workers, from its config file>",
+  "config_summary_notes": "",
+  "weights": {
+    "link_to_model": "https://huggingface.co/nvidia/Kimi-K3-NVFP4/tree/b2428a0b83a8b712ff2e1a8448a103d4175341f1",
+    "weight_dtype": "nvfp4",
+    "kv_cache_dtype": "fp8",
+    "transformation": "Native NVFP4 checkpoint"
+  },
+  "pipeline_parallel": 1
+}

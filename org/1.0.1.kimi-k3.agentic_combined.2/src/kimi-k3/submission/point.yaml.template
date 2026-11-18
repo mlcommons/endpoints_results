@@ -1,0 +1,54 @@
+# point.yaml for one Kimi K3 point. Replace every <...> value; keep the rest.
+# Field sources: NVIDIA/SUBMITTING.md ("Files for each point").
+concurrency: <C>
+region: <low_latency | low_concurrency | med_concurrency | high_concurrency>
+shared_src: src
+shared_docs: docs
+seed_set: A
+target_cohort: 2026-10-C1
+division: Standardized
+max_supported_concurrency: <highest point of your line>
+model_name: kimi-k3
+model_precision: nvfp4
+link_to_model: https://huggingface.co/nvidia/Kimi-K3-NVFP4/tree/b2428a0b83a8b712ff2e1a8448a103d4175341f1
+link_to_model_transformation: null
+model_notes: Native NVIDIA NVFP4 checkpoint
+dataset_name: agentic_combined
+dataset_type: Accuracy + Performance
+dataset_link: https://endpoints.mlcommons-storage.org/index.html#mlperf-agentic-inference
+dataset: agentic_combined
+runtime_settings:
+  load_pattern: agentic_inference
+  target_concurrency: <C>
+  stream_all_chunks: false
+  runtime:
+    scheduler_rng_seed: 10487924139932647040
+    sample_index_rng_seed: 586478644936801402
+    # The client seeds only the scheduler and sample-index RNGs. model_seed is
+    # declared from seed set A for the checker's seed-runtime-match only.
+    model_seed: 9315206023656308754
+warmup:
+  duration_s: 0
+  requests_issued: 0
+  requests_completed: 0
+  data_source: none; warmup disabled
+  concurrency: 0
+  initialization_steps: []
+offline: none
+speculative_decoding:
+  method: DSpark
+  params:
+    decoding_type: DSpark
+    speculative_model: /models/kimi-k3-dspark
+    max_draft_len: <max_draft_len in the point's speculative_config: 3 or 5>
+    block_size: <the same value as max_draft_len>
+    draft_model_id: RadixArk/Kimi-K3-DSpark
+    draft_revision: 3c5bac301d9cf392706189d82ed947feca6c2f0f
+    draft_source: https://huggingface.co/RadixArk/Kimi-K3-DSpark/tree/3c5bac301d9cf392706189d82ed947feca6c2f0f
+    draft_precision: bfloat16
+  # The checker identifies an approved drafter by these two fields (§2.9.4).
+  model_id: RadixArk/Kimi-K3-DSpark
+  weight_checksum: git-sha1:3c5bac301d9cf392706189d82ed947feca6c2f0f
+nodes_used:
+- system_node_ensemble_id: 0
+  nodes: <nodes the point's workers used: 8 for 32 GPUs, 12 for 48 GPUs>

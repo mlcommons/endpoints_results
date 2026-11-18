@@ -1,0 +1,58 @@
+{
+  "system_desc_id": "GB300-NVL72_GB300-288GB_aarch64x48_TRTLLM-Dynamo",
+  "cooling": "liquid",
+  "node_sets": [
+    {
+      "node_set_id": 0,
+      "system_node_ensemble_id": 0,
+      "nodes_provisioned": 12,
+      "power_method": "component_sum",
+      "components": {
+        "cpu": {
+          "model": "NVIDIA Grace (ARM Neoverse-V2)",
+          "count_per_node": 2,
+          "tdp_per_unit": {
+            "value_w": 300.0,
+            "source_type": "mlc_default",
+            "source": "D.2"
+          }
+        },
+        "accelerator": {
+          "model": "NVIDIA GB300",
+          "count_per_node": 4,
+          "tdp_per_unit": {
+            "value_w": 1400.0,
+            "source_type": "public_statement",
+            "source": "https://techcommunity.microsoft.com/blog/azurehighperformancecomputingblog/breaking-the-million-token-barrier-the-technical-achievement-of-azure-nd-gb300-v/4466080"
+          },
+          "below_rated_tdp": null
+        },
+        "combined_cpu_accelerator": null,
+        "scale_up_network": {
+          "method": "bandwidth_estimate",
+          "aggregate_bandwidth_tbps": 7.222222222222222,
+          "energy_per_bit_pj": {
+            "value_pj": 5.0,
+            "source_type": "mlc_default",
+            "source": "D.1"
+          }
+        }
+      }
+    }
+  ],
+  "scale_out": {
+    "present": false
+  },
+  "declared_provisioned_power": null,
+  "computed": {
+    "major_components_w": 77866.66666666667,
+    "overhead_fraction": 0.3,
+    "other_components_w": 23360.0,
+    "published_node_power_w": 0.0,
+    "scale_out_switch_power_w": 0.0,
+    "total_system_power_w": 101226.66666666667
+  },
+  "provisioned_power_kw": 101.23,
+  "mlc_estimated_power": true,
+  "notes": "Component estimate, not a published Azure node/rack rating. Microsoft documents 2 Grace CPUs and 4 GB300 GPUs per VM and 130 TB/s aggregate NVLink bandwidth per 18-VM rack: https://learn.microsoft.com/en-us/azure/virtual-machines/sizes/gpu-accelerated/nd-gb300-v6-series . Microsoft Table 2 publishes a 1400 W per-GPU power limit; CPU power uses the D.2 ARM <=128-core default of 300 W. Proportional shared-fabric allocation assumes identical nodes: 130/18 TB/s per node, entered in aggregate_bandwidth_tbps because the checker costs components per node and multiplies by nodes_provisioned. Across 12 nodes this allocates 130*(12/18) TB/s once; at D.1's 5 pJ/bit the scale-up term is 3466.666666666667 W. Total = (24*300 + 48*1400 + 130*(12/18)*8*5)*1.30 = 101226.66666666667 W, rounded once to 101.23 kW. Nodes communicate through NVLink only for this submission, so no separate scale-out fabric is costed. Shared-fabric proration is an explicitly disclosed allocation assumption, not a vendor-published rating or an expressly approved application of the published-rack scaling rule; reviewer acceptance remains outstanding."
+}

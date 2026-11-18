@@ -1,0 +1,19 @@
+host: sith7  2026-10-10T09:25:17-05:00
+image: wongcannan/vllm-v0.30.0-nsys-withsrc:v1.0 
+image: wongcannan/mlperf-endpoints:v1.1 
+image: nginx:1.27-alpine 
+index, name, driver_version, power.limit [W], clocks.max.sm [MHz], memory.total [MiB]
+0, NVIDIA H200, 595.58.03, 700.00 W, 1980 MHz, 143771 MiB
+1, NVIDIA H200, 595.58.03, 700.00 W, 1980 MHz, 143771 MiB
+2, NVIDIA H200, 595.58.03, 700.00 W, 1980 MHz, 143771 MiB
+3, NVIDIA H200, 595.58.03, 700.00 W, 1980 MHz, 143771 MiB
+4, NVIDIA H200, 595.58.03, 700.00 W, 1980 MHz, 143771 MiB
+5, NVIDIA H200, 595.58.03, 700.00 W, 1980 MHz, 143771 MiB
+6, NVIDIA H200, 595.58.03, 700.00 W, 1980 MHz, 143771 MiB
+7, NVIDIA H200, 595.58.03, 700.00 W, 1980 MHz, 143771 MiB
+tokenizer.json: OK
+tokenizer_config.json: OK
+chat_template.jinja: OK
+LICENSE: OK
+c104f840cc67f8b6eec6f759ebc8b2693d585d4a
+c104f840cc67f8b6eec6f759ebc8b2693d585d4a

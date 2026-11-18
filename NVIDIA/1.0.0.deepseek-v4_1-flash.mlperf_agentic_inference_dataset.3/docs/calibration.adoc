@@ -1,0 +1,63 @@
+= DeepSeek-V4.1-Flash precision, calibration and runtime approximations
+
+== Checkpoint and calibration (§2.9.3, §8.1)
+
+The submitter uses the original `deepseek-ai/DeepSeek-V4.1-Flash` checkpoint at
+revision `dba1be0a40aa45a94ad051997016db3960a90277`, without additional weight
+quantization, fine-tuning or calibration. No calibration dataset is used,
+including the benchmark's performance and accuracy datasets.
+
+The checkpoint is mixed precision. Its
+https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/blob/dba1be0a40aa45a94ad051997016db3960a90277/config.json[configuration]
+declares `quant_method: fp8`, `weight_block_size: [32, 32]`,
+`scale_fmt: ue8m0`, `activation_scheme: dynamic`, and `expert_dtype: fp4`.
+The expert weights use MXFP4; other quantized weights use FP8 with one
+UE8M0 scale per 32-by-32 weight block. Unquantized tensors retain BF16.
+The point metadata and system descriptors declare `fp8/mxfp4`.
+
+== KV cache and indexer (§2.9.5)
+
+The recipe selects `--kv-cache-dtype fp8_ds_mla`. In this pinned V4.1
+implementation all 512 dimensions of a cached MLA vector, including the
+RoPE dimensions, use E4M3 FP8. Each group of 32 values has a UE8M0 scale
+computed from that group's current absolute maximum. The logical record
+contains 512 value bytes and 16 scale bytes; this is not an allocator-size
+claim. The implementation is
+https://github.com/YibaiMeng/vllm/blob/a562490e7a6ffe57dcba72a6bb1ef7b563233cd8/vllm/models/deepseek_v41/common/ops/cache_utils.py[cache_utils.py].
+
+The attention configuration additionally sets `indexer_kv_dtype: mxfp4`.
+Indexer keys use two packed E2M1 FP4 values per byte and one UE8M0 scale
+per 32 values, derived dynamically from their absolute maximum. This is a
+separate cache from the MLA cache above; see
+https://github.com/YibaiMeng/vllm/blob/a562490e7a6ffe57dcba72a6bb1ef7b563233cd8/vllm/models/deepseek_v41/common/ops/indexer_k_store.py[indexer_k_store.py].
+Neither cache uses offline calibration or benchmark-derived scales.
+
+== Sparse execution and activations (§2.9.6.4)
+
+`FLASHMLA_MEGA_ATTN_DSV41` is the selected attention backend, with
+`indexer_sparse_logits: true`. Candidate-consuming indexers score only the
+candidate blocks selected by the model's candidate indexer, rather than
+materializing logits for the full context and masking afterward. The candidate
+source and earlier indexers retain dense scoring. Candidate selection is
+input-dependent; its source layer, top-k block count and block size come from
+the checkpoint. See
+https://github.com/YibaiMeng/vllm/blob/a562490e7a6ffe57dcba72a6bb1ef7b563233cd8/vllm/models/deepseek_v41/attention.py[attention.py]
+and
+https://github.com/YibaiMeng/vllm/blob/a562490e7a6ffe57dcba72a6bb1ef7b563233cd8/vllm/model_executor/layers/sparse_mqa_indexer.py[sparse_mqa_indexer.py].
+
+`VLLM_MXFP8_TRITON_QUANT=1` selects dynamic activation quantization to E4M3
+with one UE8M0 scale per 32 activation values. Scales are computed during
+execution, without calibration data. This Rubin recipe additionally selects
+`VLLM_MXFP8_FI_LARGE_M_BACKEND=rubin` for its large-matrix dense GEMM path. The public source is
+https://github.com/YibaiMeng/vllm/blob/a562490e7a6ffe57dcba72a6bb1ef7b563233cd8/vllm/model_executor/layers/quantization/utils/mxfp8_utils.py[mxfp8_utils.py].
+
+These reduced-precision and sparse mechanisms are enabled during both
+performance and accuracy. They are disclosed separately from the unchanged
+checkpoint; absence of calibration does not imply full-precision execution.
+
+== Speculative decoding (§2.9.4)
+
+The recipe uses the checkpoint's DSpark drafter with five speculative tokens.
+Per-point `speculative_decoding` metadata and the retained serving arguments
+record the settings that ran. The submitter supplies no separately calibrated
+or fine-tuned draft checkpoint.

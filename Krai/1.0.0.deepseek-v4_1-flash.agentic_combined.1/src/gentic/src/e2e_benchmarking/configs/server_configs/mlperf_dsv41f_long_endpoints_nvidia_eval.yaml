@@ -1,0 +1,56 @@
+name: dsv41f-long-endpoints-nvidia-eval
+
+launch:
+  model: "deepseek-ai/DeepSeek-V4.1-Flash"
+  model_label: "dsv41f"
+  bench_size: long
+  scenario: endpoints
+  target_concurrency: 128 # concurrency level can be modified here to patch the bench_config's default value
+  bench_mode: perf
+  patch_num: null
+  profile: false
+  no_flag: false
+
+vllm_config:
+  env:
+    VLLM_ENGINE_READY_TIMEOUT_S: 2700
+    VLLM_USE_RUST_FRONTEND: 1
+
+  fixed_params:
+    # dsv4.1f specific flags
+    revision: dba1be0a40aa45a94ad051997016db3960a90277
+    tokenizer-mode: deepseek_v41
+    tool-call-parser: deepseek_v41
+    reasoning-parser: deepseek_v41
+    enable-auto-tool-choice: true
+    language-model-only: true # specifically for agentic inference dataset
+    engram-config:
+      cpu_offload: true
+      dp_shared_memory: true
+    # normal vllm flags
+    tensor-parallel-size: 8 # overridden by var_params below
+    enable-prefix-caching: true
+    async-scheduling: true
+    enable-expert-parallel: true
+    compilation-config:
+      cudagraph_mode: FULL_AND_PIECEWISE
+
+  var_params:
+    - name: max-num-seqs
+      label: seq
+      values: [1024]
+    - name: max-num-batched-tokens
+      label: tok
+      values: [8192]
+    - name: gpu-memory-utilization
+      label: gpu
+      values: [0.9]
+    - name: tensor-parallel-size
+      label: tp
+      values: [8]
+    - name: data-parallel-size
+      label: dp
+      values: [1]
+    - name: speculative-config
+      label: spec
+      values: [{method: dspark, revision: dba1be0a40aa45a94ad051997016db3960a90277, num_speculative_tokens: 5, draft_sample_method: probabilistic, rejection_sample_method: block, enable_adaptive_verification: true, disable_eagle_block_drop: true}]

@@ -1,0 +1,14 @@
+[
+  {
+    "name": "nats-server",
+    "source": "https://github.com/nats-io/nats-server/releases/download/v2.11.9/nats-server-v2.11.9-linux-arm64.tar.gz",
+    "archive_sha256": "47d7e652eb761d771bc42df04924aae0acf4e026d30ea98faa9bab216cc2e742",
+    "binary_sha256": "9886a6a64879cb5773e68bb039f7c6a8a0ce725d74ec36e3984421182c4f6ee4"
+  },
+  {
+    "name": "etcd",
+    "source": "https://github.com/etcd-io/etcd/releases/download/v3.6.5/etcd-v3.6.5-linux-arm64.tar.gz",
+    "archive_sha256": "7010161787077b07de29b15b76825ceacbbcedcb77fe2e6832f509be102cab6b",
+    "binary_sha256": "39c7553fcc551dbc5028fcea2ffb705133e0319cb1c36af1290beca2e557f6b7"
+  }
+]

@@ -1,0 +1,217 @@
+version: '0.1'
+workflow:
+  name: kimi-k3-dynamo
+  tasks:
+  - name: client_gate
+    operator: client
+    resources:
+      nodes:
+        indices:
+        - ${{ variables.CLIENT_NODE }}
+    depends_on:
+    - preflight
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PATH="/opt/venv/bin:$PATH"
+    - python3 -c 'import sys,inference_endpoint;from inference_endpoint.config.schema import BenchmarkConfig;c=BenchmarkConfig.from_yaml_file(__import__("os").environ["CLIENT_CONFIG"]);print("OFFICIAL_CLIENT_CONFIG_PASS",sys.executable,inference_endpoint.__file__)'
+  - name: control_plane
+    operator: host
+    resources:
+      nodes:
+        indices:
+        - 0
+    depends_on:
+    - client_gate
+    script:
+    - set -euo pipefail
+    - exec python3 "${RECIPE}/scripts/node.py" control-plane
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: DYNAMO_CONTROL_READY
+        timeout: 120
+  - name: prefill
+    replicas:
+      count: ${{ variables.NUM_CTX }}
+      policy: parallel
+    operator:
+      name: server
+      ntasks: ${{ variables.CTX_GPUS }}
+      ntasks_per_node: ${{ (variables.CTX_GPUS | int) if (variables.CTX_GPUS | int) < 4 else 4 }}
+    resources:
+      gpus:
+        count: ${{ variables.CTX_GPUS }}
+    depends_on:
+    - control_plane
+    script:
+    - set -euo pipefail
+    - ${{ 'unset UCX_NET_DEVICES UCX_TLS' if (variables.NUMA_BIND | int) else 'true' }}
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1 TMPDIR=/tmp
+    - export ETCD_ENDPOINTS="${HEAD_NODE_IP}:2379" NATS_SERVER="nats://${HEAD_NODE_IP}:4222" DYN_NAMESPACE="k3-${SLURM_JOB_ID}"
+    - export DYN_SYSTEM_PORT=$((9210 + SFLOW_REPLICA_INDEX))
+    - export HF_MODULES_CACHE="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/hf-modules"
+    - export XDG_CACHE_HOME="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/cache"
+    - export TLLM_AUTOTUNER_CACHE_PATH="$XDG_CACHE_HOME/autotuner.json"
+    - mkdir -p "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+    - ENV_EXPORTS=$(python3 "${SFLOW_TOOLS}/run_with_env.py" "${PREFILL_ENV}")
+    - eval "$ENV_EXPORTS"
+    - |-
+      python3 - <<'PYCFG'
+      import os,yaml
+      from pathlib import Path
+      root=Path(os.environ['SFLOW_TASK_OUTPUT_DIR'])
+      cfg=yaml.safe_load(Path(os.environ['PREFILL_CONFIG']).read_text())
+      for key in ('num_serve_frontends','reasoning_parser'): cfg.pop(key,None)
+      if cfg.get('return_perf_metrics',False):
+          cfg['perf_metrics_output_dir']=str(root/'perf-metrics')
+      (root/('server-timing-'+os.environ.get('SLURM_PROCID','0')+'.yaml')).write_text(yaml.safe_dump(cfg,sort_keys=False))
+      PYCFG
+    - if [ "$CTX_GPUS" = 1 ]; then export TRTLLM_DWDP_RANK="$SFLOW_REPLICA_INDEX" TRTLLM_DWDP_MASTER_ADDR="$HEAD_NODE_IP";
+      fi
+    - ${{ 'NUMA_PREFIX=$(python3 "${RECIPE}/scripts/node.py" numa)' if (variables.NUMA_BIND | int) else 'true' }}
+    - ${{ 'read -r -a NUMA_ARGS <<< "$NUMA_PREFIX"' if (variables.NUMA_BIND | int) else 'true' }}
+    - ${{ 'export TLLM_NUMA_AWARE_WORKER_AFFINITY=0' if (variables.NUMA_BIND | int) else 'true' }}
+    - exec ${{ '"${NUMA_ARGS[@]}" trtllm-llmapi-launch' if (variables.NUMA_BIND | int) else 'trtllm-llmapi-launch env UCX_NET_DEVICES="$UCX_NET_DEVICES" UCX_TLS="$UCX_TLS"' }} python3 -m dynamo.trtllm
+      --model /models/kimi-k3 --served-model-name /models/kimi-k3 --namespace "$DYN_NAMESPACE" --discovery-backend
+      etcd --request-plane ${{ variables.DYNAMO_REQUEST_PLANE }} --event-plane nats --disaggregation-mode prefill
+      --extra-engine-args "${SFLOW_TASK_OUTPUT_DIR}/server-timing-${SLURM_PROCID:-0}.yaml" --publish-metrics --no-publish-kv-events
+      --dyn-reasoning-parser kimi_k3 --dyn-tool-call-parser kimi_k3 --router-mode least-loaded --conversation-affinity
+      --conversation-affinity-dp-rank-source engine --router-session-affinity-ttl-secs 14400 --router-session-affinity-mode
+      hard
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: Set runtime config data_parallel_size
+        timeout: 3600
+      failure:
+        log_watch:
+          regex_pattern: 're:OutOfMemoryError|RuntimeError: Executor|EngineDeadError|CUDA error:|CUDA out of memory'
+  - name: decode
+    replicas:
+      count: ${{ variables.NUM_GEN }}
+      policy: parallel
+    operator:
+      name: server
+      ntasks: ${{ variables.GEN_GPUS }}
+      ntasks_per_node: ${{ (variables.GEN_GPUS | int) if (variables.GEN_GPUS | int) < 4 else 4 }}
+    resources:
+      gpus:
+        count: ${{ variables.GEN_GPUS }}
+    depends_on:
+    - control_plane
+    script:
+    - set -euo pipefail
+    - ${{ 'unset UCX_NET_DEVICES UCX_TLS' if (variables.NUMA_BIND | int) else 'true' }}
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1 TMPDIR=/tmp
+    - export ETCD_ENDPOINTS="${HEAD_NODE_IP}:2379" NATS_SERVER="nats://${HEAD_NODE_IP}:4222" DYN_NAMESPACE="k3-${SLURM_JOB_ID}"
+    - export DYN_SYSTEM_PORT=$((9310 + SFLOW_REPLICA_INDEX))
+    - export HF_MODULES_CACHE="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/hf-modules"
+    - export XDG_CACHE_HOME="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/cache"
+    - export TLLM_AUTOTUNER_CACHE_PATH="$XDG_CACHE_HOME/autotuner.json"
+    - mkdir -p "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+    - ENV_EXPORTS=$(python3 "${SFLOW_TOOLS}/run_with_env.py" "${DECODE_ENV}")
+    - eval "$ENV_EXPORTS"
+    - |-
+      python3 - <<'PYCFG'
+      import os,yaml
+      from pathlib import Path
+      root=Path(os.environ['SFLOW_TASK_OUTPUT_DIR'])
+      cfg=yaml.safe_load(Path(os.environ['DECODE_CONFIG']).read_text())
+      for key in ('num_serve_frontends','reasoning_parser'): cfg.pop(key,None)
+      if cfg.get('return_perf_metrics',False):
+          cfg['perf_metrics_output_dir']=str(root/'perf-metrics')
+      (root/('server-timing-'+os.environ.get('SLURM_PROCID','0')+'.yaml')).write_text(yaml.safe_dump(cfg,sort_keys=False))
+      PYCFG
+    - ${{ 'NUMA_PREFIX=$(python3 "${RECIPE}/scripts/node.py" numa)' if (variables.NUMA_BIND | int) else 'true' }}
+    - ${{ 'read -r -a NUMA_ARGS <<< "$NUMA_PREFIX"' if (variables.NUMA_BIND | int) else 'true' }}
+    - ${{ 'export TLLM_NUMA_AWARE_WORKER_AFFINITY=0' if (variables.NUMA_BIND | int) else 'true' }}
+    - exec ${{ '"${NUMA_ARGS[@]}" trtllm-llmapi-launch' if (variables.NUMA_BIND | int) else 'trtllm-llmapi-launch env UCX_NET_DEVICES="$UCX_NET_DEVICES" UCX_TLS="$UCX_TLS"' }} python3 ${{ variables.DYNAMO_DECODE_ENTRY
+      }} --model /models/kimi-k3 --served-model-name /models/kimi-k3 --namespace "$DYN_NAMESPACE" --discovery-backend
+      etcd --request-plane ${{ variables.DYNAMO_REQUEST_PLANE }} --event-plane nats --disaggregation-mode decode
+      --extra-engine-args "${SFLOW_TASK_OUTPUT_DIR}/server-timing-${SLURM_PROCID:-0}.yaml" ${{ variables.DYNAMO_DECODE_METRICS_FLAG
+      }} --no-publish-kv-events --dyn-reasoning-parser kimi_k3 --dyn-tool-call-parser kimi_k3 --router-mode ${{
+      variables.DYNAMO_DECODE_ROUTER_MODE }} ${{ variables.DYNAMO_DECODE_EXTRA_ARGS }}
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: Set runtime config data_parallel_size
+        timeout: 3600
+      failure:
+        log_watch:
+          regex_pattern: 're:OutOfMemoryError|RuntimeError: Executor|EngineDeadError|CUDA error:|CUDA out of memory'
+  - name: frontend
+    operator:
+      name: server
+      ntasks: 1
+    resources:
+      nodes:
+        indices:
+        - ${{ variables.FRONTEND_NODE }}
+    depends_on:
+    - prefill
+    - decode
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - export PYTHONNOUSERSITE=1 PYTHONUNBUFFERED=1 TMPDIR=/tmp
+    - export HF_MODULES_CACHE="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/hf-modules"
+    - export XDG_CACHE_HOME="/tmp/kimi-${SLURM_JOB_ID}-${SLURM_STEP_ID}-${SLURM_PROCID:-0}/cache"
+    - export TLLM_AUTOTUNER_CACHE_PATH="$XDG_CACHE_HOME/autotuner.json"
+    - mkdir -p "$HF_MODULES_CACHE" "$XDG_CACHE_HOME"
+    - export ETCD_ENDPOINTS="${HEAD_NODE_IP}:2379" NATS_SERVER="nats://${HEAD_NODE_IP}:4222" DYN_NAMESPACE="k3-${SLURM_JOB_ID}"
+    - export DYN_SYSTEM_PORT=9200
+    - export DYN_K3_NATIVE_TEXT_COMPAT=0 DYN_RUNTIME_NUM_WORKER_THREADS=8 DYN_RUNTIME_MAX_BLOCKING_THREADS=16
+    - export PYTHONPATH="/opt/k3-dynamo/frontend"
+    - python3 -c 'import dynamo._core,hashlib;from pathlib import Path;p=Path(dynamo._core.__file__).resolve();assert
+      hashlib.sha256(p.read_bytes()).hexdigest()==__import__("os").environ["DYNAMO_FRONTEND_CORE_SHA256"];print("FRONTEND_CORE",p)'
+    - echo DYNAMO_FRONTEND_STARTING
+    - exec python3 -m dynamo.frontend --namespace "$DYN_NAMESPACE" --http-host 0.0.0.0 --http-port 8000 --discovery-backend
+      etcd --request-plane ${{ variables.DYNAMO_REQUEST_PLANE }} --event-plane nats --model-name /models/kimi-k3
+      --model-path /models/kimi-k3 --trust-remote-code --dyn-chat-processor dynamo --router-mode ${{ variables.DYNAMO_DECODE_ROUTER_MODE
+      }} --migration-limit 0
+    probes:
+      readiness:
+        log_watch:
+          regex_pattern: DYNAMO_FRONTEND_STARTING
+        timeout: 3600
+      failure:
+        log_watch:
+          regex_pattern: re:Traceback|panicked at
+  - name: benchmark
+    operator: client
+    resources:
+      nodes:
+        indices:
+        - ${{ variables.CLIENT_NODE }}
+    depends_on:
+    - frontend
+    script:
+    - set -euo pipefail
+    - unset PYTHONPATH PYTHONHOME UV_PROJECT_ENVIRONMENT
+    - test "${FRONTEND_NODE_IP}" = "${SFLOW_TASK_ASSIGNED_NODE_IPS%%,*}"
+    - export PATH="/opt/venv/bin:$PATH"
+    - python3 -c 'import sys,inference_endpoint;print("OFFICIAL_CLIENT",sys.executable,inference_endpoint.__file__)'
+    - export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+    - python3 "${RECIPE}/scripts/node.py" wait-ready
+    - cp "${CLIENT_CONFIG}" "${SFLOW_WORKFLOW_OUTPUT_DIR}/launched-client.yaml"
+    - set +e
+    - /opt/venv/bin/python3 -m inference_endpoint.main benchmark from-config -c "${CLIENT_CONFIG}" --mode perf
+    - CLIENT_RC=$?
+    - printf "%s\n" "$CLIENT_RC" > "${SFLOW_WORKFLOW_OUTPUT_DIR}/benchmark-client-exit-code"
+    - exit "$CLIENT_RC"
+variables:
+  DYNAMO_REQUEST_PLANE:
+    value: tcp
+  DYNAMO_DECODE_ROUTER_MODE:
+    value: round-robin
+  DYNAMO_DECODE_ENTRY:
+    value: /opt/k3-dynamo/helpers/dynamo_entry_v4.py
+  DYNAMO_DECODE_EXTRA_ARGS:
+    value: ''
+  DYNAMO_DECODE_METRICS_FLAG:
+    value: --no-publish-metrics
+  DYNAMO_FRONTEND_CORE_SHA256:
+    value: 7041b8df80accb230c5ecb4dd3be59785e70f2636d9891c107cb31a86bf826d9

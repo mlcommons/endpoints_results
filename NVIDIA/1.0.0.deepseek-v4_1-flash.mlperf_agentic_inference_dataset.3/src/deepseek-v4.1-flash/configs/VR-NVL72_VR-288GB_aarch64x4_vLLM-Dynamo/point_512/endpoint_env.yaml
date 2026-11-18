@@ -1,0 +1,5 @@
+PATH: /opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+HF_HOME: ${DATA_PATH}/dataset_cache
+HF_HUB_OFFLINE: '1'
+TOKENIZERS_PARALLELISM: 'false'
+TQDM_MININTERVAL: '10'
